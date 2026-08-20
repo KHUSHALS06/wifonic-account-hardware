@@ -18,8 +18,9 @@ $search_safe = mysql_real_escape_string(
 
 
 /*
- * Only show devices that still have
- * inventory available.
+ * Only show devices that are still in
+ * stock — purchased and not yet sold
+ * or sent out.
  */
 $query = "
     SELECT
@@ -27,12 +28,13 @@ $query = "
         name,
         sn,
         mac,
-        price,
+        purchase_price AS price,
         purchase_date,
         purchased_from,
         quantity
     FROM devices
-    WHERE quantity > 0
+    WHERE status = 'Available'
+    AND quantity > 0
 ";
 
 

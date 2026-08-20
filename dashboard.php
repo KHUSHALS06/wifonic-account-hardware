@@ -90,14 +90,44 @@ if (
 
 /*
  * =========================================================
+ * STATUS FILTER
+ * =========================================================
+ */
+
+$status_filter = '';
+
+if (isset($_GET['status'])) {
+    $status_filter = trim($_GET['status']);
+}
+
+$allowed_statuses = array('Available', 'Sold', 'Sent');
+
+if (!in_array($status_filter, $allowed_statuses, true)) {
+    $status_filter = '';
+}
+
+
+/*
+ * =========================================================
  * SEARCH
  * =========================================================
  */
 
 $where = "
-    WHERE status = 'Available'
+    WHERE 1 = 1
 ";
 
+if ($status_filter != '') {
+
+    $status_safe = mysql_real_escape_string(
+        $status_filter,
+        $conn
+    );
+
+    $where .= "
+        AND d.status = '$status_safe'
+    ";
+}
 
 if ($search != '') {
 
@@ -108,11 +138,13 @@ if ($search != '') {
 
     $where .= "
         AND (
-            name LIKE '%$search_safe%'
-            OR sn LIKE '%$search_safe%'
-            OR mac LIKE '%$search_safe%'
-            OR source LIKE '%$search_safe%'
-            OR purchased_from LIKE '%$search_safe%'
+            d.name LIKE '%$search_safe%'
+            OR d.sn LIKE '%$search_safe%'
+            OR d.mac LIKE '%$search_safe%'
+            OR d.source LIKE '%$search_safe%'
+            OR d.purchased_from LIKE '%$search_safe%'
+            OR ds.sold_to LIKE '%$search_safe%'
+            OR sd.sent_to LIKE '%$search_safe%'
         )
     ";
 }
@@ -122,24 +154,61 @@ if ($search != '') {
  * =========================================================
  * LOAD INVENTORY
  * =========================================================
+ *
+ * Every device (by SN) is shown once, whether it is
+ * still in stock, has been sold, or has been sent out.
+ * The latest matching sale / send record is attached so
+ * the row can show who it went to and when.
  */
 
 $query = "
     SELECT
-        id,
-        name,
-        sn,
-        mac,
-        quantity,
-        source,
-        purchase_date,
-        purchased_from,
-        purchase_price,
-        status,
-        created_at
-    FROM devices
+        d.id,
+        d.name,
+        d.sn,
+        d.mac,
+        d.quantity,
+        d.source,
+        d.purchase_date,
+        d.purchased_from,
+        d.purchase_price,
+        d.status,
+        d.created_at,
+        ds.sold_to,
+        ds.property_name AS sold_property,
+        ds.sale_date,
+        sd.sent_to,
+        sd.property_name AS sent_property,
+        sd.sent_date
+    FROM devices d
+    LEFT JOIN (
+        SELECT
+            s1.device_id,
+            s1.sold_to,
+            s1.property_name,
+            s1.sale_date
+        FROM device_sales s1
+        WHERE s1.id = (
+            SELECT MAX(s2.id)
+            FROM device_sales s2
+            WHERE s2.device_id = s1.device_id
+        )
+    ) ds ON ds.device_id = d.id
+    LEFT JOIN (
+        SELECT
+            n1.device_id,
+            n1.sent_to,
+            n1.property_name,
+            n1.sent_date
+        FROM device_sends n1
+        WHERE n1.id = (
+            SELECT MAX(n2.id)
+            FROM device_sends n2
+            WHERE n2.device_id = n1.device_id
+        )
+    ) sd ON sd.device_id = d.id
     $where
-    ORDER BY id DESC
+    ORDER BY d.id DESC
 ";
 
 $result = mysql_query(
@@ -865,6 +934,46 @@ body:after {
 }
 
 
+.status-select {
+
+    height:
+        44px;
+
+    padding:
+        0 12px;
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            0.60
+        );
+
+    border-radius:
+        10px;
+
+    outline:
+        none;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.55
+        );
+
+    font-size:
+        13px;
+
+    cursor:
+        pointer;
+
+}
+
+
 .search-button {
 
     height:
@@ -1117,6 +1226,66 @@ tbody tr:hover {
 
     font-weight:
         bold;
+
+}
+
+
+.status-sold {
+
+    color:
+        #1565c0;
+
+    background:
+        rgba(
+            33,
+            150,
+            243,
+            0.14
+        );
+
+}
+
+
+.status-sent {
+
+    color:
+        #e65100;
+
+    background:
+        rgba(
+            255,
+            152,
+            0,
+            0.16
+        );
+
+}
+
+
+.status-detail {
+
+    display:
+        block;
+
+    margin-top:
+        5px;
+
+    font-size:
+        11px;
+
+    font-weight:
+        normal;
+
+    color:
+        rgba(
+            38,
+            50,
+            56,
+            0.65
+        );
+
+    white-space:
+        normal;
 
 }
 
@@ -1384,7 +1553,7 @@ tbody tr:hover {
         </a>
 
         <a
-            href="dashboard.php"
+            href="inventory.php"
             class="nav-link"
         >
             Inventory
@@ -1410,6 +1579,24 @@ tbody tr:hover {
         >
             Send
         </a>
+
+        <?php if ($role === 'admin') { ?>
+
+            <a
+                href="users.php"
+                class="nav-link"
+            >
+                Users
+            </a>
+
+            <a
+                href="audit_log.php"
+                class="nav-link"
+            >
+                Audit Logs
+            </a>
+
+        <?php } ?>
 
     </nav>
 
@@ -1485,7 +1672,7 @@ tbody tr:hover {
             </h1>
 
             <div class="subtitle">
-                Currently available hardware
+                All hardware — in stock, sold and sent
             </div>
 
         </div>
@@ -1523,7 +1710,7 @@ tbody tr:hover {
                     type="text"
                     name="search"
                     class="search-input"
-                    placeholder="Search name, SN, MAC, source or purchased from..."
+                    placeholder="Search name, SN, MAC, source, sold to or sent to..."
                     value="<?php
 
                     echo htmlspecialchars(
@@ -1536,6 +1723,48 @@ tbody tr:hover {
                 >
 
 
+                <select
+                    name="status"
+                    class="status-select"
+                    onchange="this.form.submit()"
+                >
+
+                    <option value="">
+                        All Statuses
+                    </option>
+
+                    <?php foreach ($allowed_statuses as $status_option) { ?>
+
+                        <option
+                            value="<?php
+                                echo htmlspecialchars(
+                                    $status_option,
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                );
+                            ?>"
+                            <?php
+
+                            echo $status_filter === $status_option
+                                ? 'selected'
+                                : '';
+
+                            ?>
+                        >
+                            <?php
+                                echo htmlspecialchars(
+                                    $status_option,
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                );
+                            ?>
+                        </option>
+
+                    <?php } ?>
+
+                </select>
+
+
                 <button
                     type="submit"
                     class="search-button"
@@ -1544,7 +1773,7 @@ tbody tr:hover {
                 </button>
 
 
-                <?php if ($search != '') { ?>
+                <?php if ($search != '' || $status_filter != '') { ?>
 
                     <a
                         href="dashboard.php"
@@ -1799,8 +2028,84 @@ tbody tr:hover {
 
                             <td>
 
-                                <span class="status">
-                                    Available
+                                <?php
+
+                                $badge_class = 'status';
+
+                                if ($device['status'] === 'Sold') {
+                                    $badge_class .= ' status-sold';
+                                } elseif ($device['status'] === 'Sent') {
+                                    $badge_class .= ' status-sent';
+                                }
+
+                                ?>
+
+                                <span class="<?php echo $badge_class; ?>">
+
+                                    <?php
+                                        echo htmlspecialchars(
+                                            $device['status'],
+                                            ENT_QUOTES,
+                                            'UTF-8'
+                                        );
+                                    ?>
+
+                                    <?php if (
+                                        $device['status'] === 'Sold' &&
+                                        $device['sold_to']
+                                    ) { ?>
+
+                                        <span class="status-detail">
+                                            To:
+                                            <?php
+                                                echo htmlspecialchars(
+                                                    $device['sold_to'],
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+                                            ?>
+                                            <?php if ($device['sale_date']) { ?>
+                                                on
+                                                <?php
+                                                    echo htmlspecialchars(
+                                                        $device['sale_date'],
+                                                        ENT_QUOTES,
+                                                        'UTF-8'
+                                                    );
+                                                ?>
+                                            <?php } ?>
+                                        </span>
+
+                                    <?php } ?>
+
+                                    <?php if (
+                                        $device['status'] === 'Sent' &&
+                                        $device['sent_to']
+                                    ) { ?>
+
+                                        <span class="status-detail">
+                                            To:
+                                            <?php
+                                                echo htmlspecialchars(
+                                                    $device['sent_to'],
+                                                    ENT_QUOTES,
+                                                    'UTF-8'
+                                                );
+                                            ?>
+                                            <?php if ($device['sent_date']) { ?>
+                                                on
+                                                <?php
+                                                    echo htmlspecialchars(
+                                                        $device['sent_date'],
+                                                        ENT_QUOTES,
+                                                        'UTF-8'
+                                                    );
+                                                ?>
+                                            <?php } ?>
+                                        </span>
+
+                                    <?php } ?>
+
                                 </span>
 
                             </td>
@@ -1834,38 +2139,42 @@ tbody tr:hover {
                                     </a>
 
 
-                                    <a
-                                        href="sell.php?device_id=<?php
-                                        echo (int)
-                                            $device['id'];
-                                        ?>"
-                                        class="action"
-                                    >
-                                        Sell
-                                    </a>
+                                    <?php if ($device['status'] === 'Available') { ?>
+
+                                        <a
+                                            href="sell.php?device_id=<?php
+                                            echo (int)
+                                                $device['id'];
+                                            ?>"
+                                            class="action"
+                                        >
+                                            Sell
+                                        </a>
 
 
-                                    <a
-                                        href="send.php?device_id=<?php
-                                        echo (int)
-                                            $device['id'];
-                                        ?>"
-                                        class="action"
-                                    >
-                                        Send
-                                    </a>
+                                        <a
+                                            href="send.php?device_id=<?php
+                                            echo (int)
+                                                $device['id'];
+                                            ?>"
+                                            class="action"
+                                        >
+                                            Send
+                                        </a>
 
 
-                                    <a
-                                        href="dashboard.php?delete=<?php
-                                        echo (int)
-                                            $device['id'];
-                                        ?>"
-                                        class="action action-delete"
-                                        onclick="return confirm('Delete this device?');"
-                                    >
-                                        Delete
-                                    </a>
+                                        <a
+                                            href="dashboard.php?delete=<?php
+                                            echo (int)
+                                                $device['id'];
+                                            ?>"
+                                            class="action action-delete"
+                                            onclick="return confirm('Delete this device?');"
+                                        >
+                                            Delete
+                                        </a>
+
+                                    <?php } ?>
 
 
                                 </div>
