@@ -1889,7 +1889,7 @@ tbody tr:last-child td {
 
 
                                 <a
-                                    href="sell_cart.php?add=<?php
+                                    href="sell_device.php?id=<?php
                                         echo (int)
                                             $device['id'];
                                     ?>"
@@ -2111,7 +2111,7 @@ function sellSelected() {
 
 
     window.location =
-        'sell_cart.php?ids=' +
+        'sell_device.php?ids=' +
         selected.join(',');
 
 }
