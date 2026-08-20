@@ -1,0 +1,19 @@
+# Secrets
+.env
+config.local.php
+
+# Uploaded files
+uploads/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+
+# Editor files
+.vscode/
+.idea/
+
+# Old/backup pages
+old_pages_backup/
