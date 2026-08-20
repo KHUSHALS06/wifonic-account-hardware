@@ -2,6 +2,7 @@
 
 require_once 'auth.php';
 require_once 'audit.php';
+require_once 'bcrypt_compat.php';
 
 require_roles(array('admin'));
 
@@ -138,10 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $conn
         );
 
-        $password_hash = password_hash(
-            $password,
-            PASSWORD_DEFAULT
-        );
+        $password_hash = bcrypt_hash($password);
 
         $password_hash_safe = mysql_real_escape_string(
             $password_hash,
