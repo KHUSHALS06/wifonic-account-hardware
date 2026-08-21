@@ -14,12 +14,6 @@ if (isset($_GET['search'])) {
 }
 
 
-/*
- * =========================================================
- * DELETE DEVICE
- * =========================================================
- */
-
 if (
     isset($_GET['delete']) &&
     ctype_digit($_GET['delete'])
@@ -65,11 +59,6 @@ if (
             )
         ) {
 
-            /*
-             * Audit is included through audit.php
-             * on pages that perform the operation.
-             */
-
             require_once 'audit.php';
 
             audit_log_action(
@@ -88,12 +77,6 @@ if (
 }
 
 
-/*
- * =========================================================
- * STATUS FILTER
- * =========================================================
- */
-
 $status_filter = '';
 
 if (isset($_GET['status'])) {
@@ -106,12 +89,6 @@ if (!in_array($status_filter, $allowed_statuses, true)) {
     $status_filter = '';
 }
 
-
-/*
- * =========================================================
- * SEARCH
- * =========================================================
- */
 
 $where = "
     WHERE 1 = 1
@@ -149,17 +126,6 @@ if ($search != '') {
     ";
 }
 
-
-/*
- * =========================================================
- * LOAD INVENTORY
- * =========================================================
- *
- * Every device (by SN) is shown once, whether it is
- * still in stock, has been sold, or has been sent out.
- * The latest matching sale / send record is attached so
- * the row can show who it went to and when.
- */
 
 $query = "
     SELECT
@@ -283,10 +249,6 @@ body {
 }
 
 
-/* =========================================================
-   DECORATIVE GLASS CIRCLES
-   ========================================================= */
-
 body:before {
 
     content: "";
@@ -339,10 +301,6 @@ body:after {
 
 }
 
-
-/* =========================================================
-   HEADER
-   ========================================================= */
 
 .header {
 
@@ -408,10 +366,6 @@ body:after {
 
 }
 
-
-/* =========================================================
-   LOGO
-   ========================================================= */
 
 .logo {
 
@@ -482,10 +436,6 @@ body:after {
 
 }
 
-
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
 
 .navigation {
 
@@ -573,9 +523,41 @@ body:after {
 }
 
 
-/* =========================================================
-   USER
-   ========================================================= */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: rgba(255, 255, 255, 0.95);
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    z-index: 1000;
+    padding: 8px 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.dropdown-content a {
+    display: block;
+    padding: 10px 18px;
+    text-decoration: none;
+    color: #263238;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.dropdown-content a:hover {
+    background: rgba(116, 235, 213, 0.2);
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+}
+
 
 .header-right {
 
@@ -666,10 +648,6 @@ body:after {
 }
 
 
-/* =========================================================
-   MAIN
-   ========================================================= */
-
 .container {
 
     position:
@@ -689,10 +667,6 @@ body:after {
 
 }
 
-
-/* =========================================================
-   PAGE HEADER
-   ========================================================= */
 
 .page-header {
 
@@ -744,10 +718,6 @@ body:after {
 }
 
 
-/* =========================================================
-   BUTTON
-   ========================================================= */
-
 .add-button {
 
     height:
@@ -793,10 +763,6 @@ body:after {
 }
 
 
-/* =========================================================
-   CARD
-   ========================================================= */
-
 .card {
 
     overflow:
@@ -839,10 +805,6 @@ body:after {
 
 }
 
-
-/* =========================================================
-   SEARCH
-   ========================================================= */
 
 .search-area {
 
@@ -1044,10 +1006,6 @@ body:after {
 
 }
 
-
-/* =========================================================
-   TABLE
-   ========================================================= */
 
 .table-wrapper {
 
@@ -1290,10 +1248,6 @@ tbody tr:hover {
 }
 
 
-/* =========================================================
-   ACTIONS
-   ========================================================= */
-
 .actions {
 
     display:
@@ -1365,10 +1319,6 @@ tbody tr:hover {
 }
 
 
-/* =========================================================
-   EMPTY
-   ========================================================= */
-
 .empty {
 
     padding:
@@ -1415,10 +1365,6 @@ tbody tr:hover {
 
 }
 
-
-/* =========================================================
-   RESPONSIVE
-   ========================================================= */
 
 @media (max-width: 1100px) {
 
@@ -1518,13 +1464,7 @@ tbody tr:hover {
 
 <body>
 
-
-<!-- =====================================================
-     HEADER
-     ===================================================== -->
-
 <div class="header">
-
 
     <div class="logo">
 
@@ -1537,11 +1477,6 @@ tbody tr:hover {
         </div>
 
     </div>
-
-
-    <!-- =================================================
-         MAIN NAVIGATION
-         ================================================= -->
 
     <nav class="navigation">
 
@@ -1580,6 +1515,22 @@ tbody tr:hover {
             Send
         </a>
 
+        <?php if ($role === 'admin' || $role === 'manager') { ?>
+            
+            <div class="dropdown">
+                <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">
+                    Management
+                </a>
+                <div class="dropdown-content" id="managementDropdown">
+                    <a href="add_brand.php">Add Brand</a>
+                    <a href="add_model.php">Add Model</a>
+                    <a href="add_property.php">Add Property</a>
+                    <a href="add_courier.php">Add Courier</a>
+                </div>
+            </div>
+            
+        <?php } ?>
+
         <?php if ($role === 'admin') { ?>
 
             <a
@@ -1600,13 +1551,7 @@ tbody tr:hover {
 
     </nav>
 
-
-    <!-- =================================================
-         USER
-         ================================================= -->
-
     <div class="header-right">
-
 
         <div class="user-box">
 
@@ -1640,7 +1585,6 @@ tbody tr:hover {
 
         </div>
 
-
         <a
             href="logout.php"
             class="logout"
@@ -1648,22 +1592,13 @@ tbody tr:hover {
             Logout
         </a>
 
-
     </div>
-
 
 </div>
 
-
-<!-- =====================================================
-     MAIN
-     ===================================================== -->
-
 <div class="container">
 
-
     <div class="page-header">
-
 
         <div>
 
@@ -1672,11 +1607,10 @@ tbody tr:hover {
             </h1>
 
             <div class="subtitle">
-                All hardware — in stock, sold and sent
+                All hardware in stock, sold and sent
             </div>
 
         </div>
-
 
         <a
             href="add_device.php"
@@ -1685,26 +1619,17 @@ tbody tr:hover {
             + Add Device
         </a>
 
-
     </div>
-
 
     <div class="card">
 
-
-        <!-- =================================================
-             SEARCH
-             ================================================= -->
-
         <div class="search-area">
-
 
             <form
                 method="get"
                 action="dashboard.php"
                 class="search-form"
             >
-
 
                 <input
                     type="text"
@@ -1721,7 +1646,6 @@ tbody tr:hover {
 
                     ?>"
                 >
-
 
                 <select
                     name="status"
@@ -1764,14 +1688,12 @@ tbody tr:hover {
 
                 </select>
 
-
                 <button
                     type="submit"
                     class="search-button"
                 >
                     Search
                 </button>
-
 
                 <?php if ($search != '' || $status_filter != '') { ?>
 
@@ -1784,27 +1706,17 @@ tbody tr:hover {
 
                 <?php } ?>
 
-
             </form>
 
-
         </div>
-
-
-        <!-- =================================================
-             INVENTORY TABLE
-             ================================================= -->
 
         <?php if (
             mysql_num_rows($result) > 0
         ) { ?>
 
-
             <div class="table-wrapper">
 
-
                 <table>
-
 
                     <thead>
 
@@ -1854,18 +1766,14 @@ tbody tr:hover {
 
                     </thead>
 
-
                     <tbody>
-
 
                     <?php while (
                         $device =
                         mysql_fetch_assoc($result)
                     ) { ?>
 
-
                         <tr>
-
 
                             <td>
 
@@ -1885,7 +1793,6 @@ tbody tr:hover {
 
                             </td>
 
-
                             <td>
 
                                 <span class="mono">
@@ -1904,7 +1811,6 @@ tbody tr:hover {
 
                             </td>
 
-
                             <td>
 
                                 <span class="mono">
@@ -1918,14 +1824,13 @@ tbody tr:hover {
                                             ENT_QUOTES,
                                             'UTF-8'
                                         )
-                                        : '—';
+                                        : '';
 
                                     ?>
 
                                 </span>
 
                             </td>
-
 
                             <td>
 
@@ -1937,7 +1842,6 @@ tbody tr:hover {
                                 ?>
 
                             </td>
-
 
                             <td>
 
@@ -1957,7 +1861,6 @@ tbody tr:hover {
 
                             </td>
 
-
                             <td>
 
                                 <?php
@@ -1970,12 +1873,11 @@ tbody tr:hover {
                                         ENT_QUOTES,
                                         'UTF-8'
                                     )
-                                    : '—';
+                                    : '';
 
                                 ?>
 
                             </td>
-
 
                             <td>
 
@@ -1989,12 +1891,11 @@ tbody tr:hover {
                                         ENT_QUOTES,
                                         'UTF-8'
                                     )
-                                    : '—';
+                                    : '';
 
                                 ?>
 
                             </td>
-
 
                             <td>
 
@@ -2017,14 +1918,13 @@ tbody tr:hover {
 
                                 } else {
 
-                                    echo '—';
+                                    echo '';
 
                                 }
 
                                 ?>
 
                             </td>
-
 
                             <td>
 
@@ -2110,12 +2010,9 @@ tbody tr:hover {
 
                             </td>
 
-
                             <td>
 
-
                                 <div class="actions">
-
 
                                     <a
                                         href="edit_device.php?id=<?php
@@ -2127,7 +2024,6 @@ tbody tr:hover {
                                         Edit
                                     </a>
 
-
                                     <a
                                         href="device_details.php?id=<?php
                                         echo (int)
@@ -2137,7 +2033,6 @@ tbody tr:hover {
                                     >
                                         View
                                     </a>
-
 
                                     <?php if ($device['status'] === 'Available') { ?>
 
@@ -2151,7 +2046,6 @@ tbody tr:hover {
                                             Sell
                                         </a>
 
-
                                         <a
                                             href="send.php?device_id=<?php
                                             echo (int)
@@ -2161,7 +2055,6 @@ tbody tr:hover {
                                         >
                                             Send
                                         </a>
-
 
                                         <a
                                             href="dashboard.php?delete=<?php
@@ -2176,30 +2069,21 @@ tbody tr:hover {
 
                                     <?php } ?>
 
-
                                 </div>
-
 
                             </td>
 
-
                         </tr>
-
 
                     <?php } ?>
 
-
                     </tbody>
-
 
                 </table>
 
-
             </div>
 
-
         <?php } else { ?>
-
 
             <div class="empty">
 
@@ -2227,15 +2111,34 @@ tbody tr:hover {
 
             </div>
 
-
         <?php } ?>
-
 
     </div>
 
-
 </div>
 
+<script>
+function toggleDropdown(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    var dropdown = document.getElementById('managementDropdown');
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.display = 'block';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    var dropdown = document.getElementById('managementDropdown');
+    var toggle = document.querySelector('.dropdown-toggle');
+    if (dropdown && toggle) {
+        if (!toggle.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    }
+});
+</script>
 
 </body>
 
