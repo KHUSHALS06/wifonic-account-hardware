@@ -1668,7 +1668,7 @@ tbody tr:hover {
         <div>
 
             <h1 class="title">
-                Inventory
+                Wifonic
             </h1>
 
             <div class="subtitle">

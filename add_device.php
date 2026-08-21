@@ -20,6 +20,45 @@ $purchase_date = '';
 $purchased_from = '';
 $purchase_price = '';
 
+$brands = array();
+$brands_query = "
+    SELECT id, brand_name
+    FROM brands
+    ORDER BY brand_name ASC
+";
+$brands_result = mysql_query($brands_query, $conn);
+if ($brands_result) {
+    while ($row = mysql_fetch_assoc($brands_result)) {
+        $brands[] = $row;
+    }
+}
+
+$models = array();
+$models_query = "
+    SELECT id, brand_id, model_name
+    FROM models
+    ORDER BY model_name ASC
+";
+$models_result = mysql_query($models_query, $conn);
+if ($models_result) {
+    while ($row = mysql_fetch_assoc($models_result)) {
+        $models[] = $row;
+    }
+}
+
+$suppliers = array();
+$suppliers_query = "
+    SELECT id, supplier_name
+    FROM suppliers
+    ORDER BY supplier_name ASC
+";
+$suppliers_result = mysql_query($suppliers_query, $conn);
+if ($suppliers_result) {
+    while ($row = mysql_fetch_assoc($suppliers_result)) {
+        $suppliers[] = $row;
+    }
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
@@ -669,6 +708,68 @@ select:focus {
     }
 }
 
+.combo {
+    position: relative;
+}
+
+.combo-input {
+    width: 100%;
+    height: 45px;
+    border: none;
+    outline: none;
+    border-radius: 10px;
+    padding: 0 13px;
+    font-size: 14px;
+    background: rgba(255,255,255,0.72);
+    color: #333;
+}
+
+.combo-input:focus {
+    box-shadow: 0 0 0 3px rgba(116,235,213,0.30);
+}
+
+.combo-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.combo-list {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    z-index: 50;
+}
+
+.combo-list.open {
+    display: block;
+}
+
+.combo-option {
+    padding: 10px 13px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+.combo-option:hover,
+.combo-option.active {
+    background: rgba(116,235,213,0.25);
+}
+
+.combo-empty {
+    padding: 10px 13px;
+    font-size: 13px;
+    color: #888;
+}
+
+
 </style>
 
 </head>
@@ -749,6 +850,47 @@ select:focus {
 
                 <div class="form-group">
 
+                    <label for="brand_search">
+                        Brand
+                    </label>
+
+                    <div class="combo" data-combo="brand">
+                        <input
+                            type="text"
+                            id="brand_search"
+                            class="combo-input"
+                            placeholder="Search brand..."
+                            autocomplete="off"
+                        >
+                        <div class="combo-list"></div>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group">
+
+                    <label for="model_search">
+                        Model
+                    </label>
+
+                    <div class="combo" data-combo="model">
+                        <input
+                            type="text"
+                            id="model_search"
+                            class="combo-input"
+                            placeholder="Select a brand first"
+                            autocomplete="off"
+                            disabled
+                        >
+                        <div class="combo-list"></div>
+                    </div>
+
+                </div>
+
+
+                <div class="form-group full">
+
                     <label for="name">
                         Device Name
                         <span class="required">*</span>
@@ -767,6 +909,10 @@ select:focus {
                         ?>"
                         required
                     >
+
+                    <div class="note">
+                        Auto-filled from Brand + Model, edit as needed
+                    </div>
 
                 </div>
 
@@ -938,18 +1084,24 @@ select:focus {
                         Purchased From
                     </label>
 
-                    <input
-                        type="text"
-                        id="purchased_from"
-                        name="purchased_from"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $purchased_from,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                    >
+                    <div class="combo" data-combo="supplier">
+                        <input
+                            type="text"
+                            id="purchased_from"
+                            name="purchased_from"
+                            class="combo-input"
+                            placeholder="Search or type a name..."
+                            autocomplete="off"
+                            value="<?php
+                            echo htmlspecialchars(
+                                $purchased_from,
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
+                            ?>"
+                        >
+                        <div class="combo-list"></div>
+                    </div>
 
                 </div>
 
@@ -1009,6 +1161,136 @@ select:focus {
     </div>
 
 </div>
+
+<script>
+var BRANDS = <?php
+    $brand_rows = array();
+    foreach ($brands as $b) {
+        $brand_rows[] = array(
+            'id' => (int)$b['id'],
+            'name' => $b['brand_name']
+        );
+    }
+    echo json_encode($brand_rows);
+?>;
+
+var MODELS = <?php
+    $model_rows = array();
+    foreach ($models as $m) {
+        $model_rows[] = array(
+            'id' => (int)$m['id'],
+            'brand_id' => (int)$m['brand_id'],
+            'name' => $m['model_name']
+        );
+    }
+    echo json_encode($model_rows);
+?>;
+
+var SUPPLIERS = <?php
+    $supplier_rows = array();
+    foreach ($suppliers as $s) {
+        $supplier_rows[] = array(
+            'id' => (int)$s['id'],
+            'name' => $s['supplier_name']
+        );
+    }
+    echo json_encode($supplier_rows);
+?>;
+
+function initCombo(root, items, onSelect) {
+    var input = root.querySelector('.combo-input');
+    var list = root.querySelector('.combo-list');
+
+    function render(filterText) {
+        var text = filterText.toLowerCase();
+        var matches = items.filter(function (item) {
+            return item.name.toLowerCase().indexOf(text) !== -1;
+        });
+
+        list.innerHTML = '';
+
+        if (matches.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'combo-empty';
+            empty.textContent = 'No matches';
+            list.appendChild(empty);
+        } else {
+            matches.forEach(function (item) {
+                var option = document.createElement('div');
+                option.className = 'combo-option';
+                option.textContent = item.name;
+                option.addEventListener('click', function () {
+                    input.value = item.name;
+                    list.classList.remove('open');
+                    onSelect(item);
+                });
+                list.appendChild(option);
+            });
+        }
+    }
+
+    input.addEventListener('focus', function () {
+        render(input.value);
+        list.classList.add('open');
+    });
+
+    input.addEventListener('input', function () {
+        render(input.value);
+        list.classList.add('open');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!root.contains(e.target)) {
+            list.classList.remove('open');
+        }
+    });
+
+    return {
+        setItems: function (newItems) {
+            items = newItems;
+        }
+    };
+}
+
+var nameField = document.getElementById('name');
+var selectedBrand = null;
+var selectedModel = null;
+
+function updateComposedName() {
+    if (selectedBrand && selectedModel) {
+        nameField.value = selectedBrand.name + ' ' + selectedModel.name;
+    }
+}
+
+var brandRoot = document.querySelector('[data-combo="brand"]');
+var modelRoot = document.querySelector('[data-combo="model"]');
+var supplierRoot = document.querySelector('[data-combo="supplier"]');
+
+var modelCombo = initCombo(modelRoot, [], function (item) {
+    selectedModel = item;
+    updateComposedName();
+});
+
+var brandCombo = initCombo(brandRoot, BRANDS, function (item) {
+    selectedBrand = item;
+    selectedModel = null;
+
+    var modelInput = modelRoot.querySelector('.combo-input');
+    modelInput.value = '';
+    modelInput.disabled = false;
+    modelInput.placeholder = 'Search model...';
+
+    var filteredModels = MODELS.filter(function (m) {
+        return m.brand_id === item.id;
+    });
+    modelCombo.setItems(filteredModels);
+
+    updateComposedName();
+});
+
+initCombo(supplierRoot, SUPPLIERS, function (item) {
+});
+</script>
 
 </body>
 
