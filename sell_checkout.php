@@ -303,6 +303,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     );
 
 
+                $brand_safe =
+                    mysql_real_escape_string(
+                        $cart['brand'],
+                        $conn
+                    );
+
+
+                $model_safe =
+                    mysql_real_escape_string(
+                        $cart['model'],
+                        $conn
+                    );
+
+
                 $sn_safe =
                     mysql_real_escape_string(
                         $cart['sn'],
@@ -363,6 +377,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         device_id,
                         source,
                         name,
+                        brand,
+                        model,
                         sn,
                         mac,
                         quantity,
@@ -378,6 +394,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $device_id_sql,
                         '$source_safe',
                         '$name_safe',
+                        '$brand_safe',
+                        '$model_safe',
                         '$sn_safe',
                         '$mac_safe',
                         $quantity,
@@ -1632,7 +1650,11 @@ td {
                 <tr>
 
                     <th>
-                        Device
+                        Brand
+                    </th>
+
+                    <th>
+                        Model
                     </th>
 
                     <th>
@@ -1692,7 +1714,20 @@ td {
 
                             <?php
                             echo htmlspecialchars(
-                                $cart['name'],
+                                $cart['brand'],
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
+                            ?>
+
+                        </td>
+
+
+                        <td>
+
+                            <?php
+                            echo htmlspecialchars(
+                                $cart['model'],
                                 ENT_QUOTES,
                                 'UTF-8'
                             );

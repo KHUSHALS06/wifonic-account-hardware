@@ -60,6 +60,21 @@ function collect_ids_from_get()
     return array_unique($requested_ids);
 }
 
+function device_display_label($device)
+{
+    $label = trim(
+        (isset($device['brand']) ? $device['brand'] : '') .
+        ' ' .
+        (isset($device['model']) ? $device['model'] : '')
+    );
+
+    if ($label != '') {
+        return $label;
+    }
+
+    return $device['name'];
+}
+
 
 /*
  * =========================================================
@@ -176,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if ($price == '' || !is_numeric($price) || (float)$price < 0) {
 
             $skipped[] = array(
-                'name' => $device['name'],
+                'name' => device_display_label($device),
                 'reason' => 'A valid selling price is required.'
             );
 
@@ -213,7 +228,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ) {
 
             $skipped[] = array(
-                'name' => $device['name'],
+                'name' => device_display_label($device),
                 'reason' => 'Already in your sell cart.'
             );
 
@@ -223,6 +238,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $name_safe = mysql_real_escape_string(
             $device['name'],
+            $conn
+        );
+
+        $brand_safe = mysql_real_escape_string(
+            $device['brand'],
+            $conn
+        );
+
+        $model_safe = mysql_real_escape_string(
+            $device['model'],
             $conn
         );
 
@@ -250,6 +275,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 device_id,
                 source,
                 name,
+                brand,
+                model,
                 sn,
                 mac,
                 quantity,
@@ -262,6 +289,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $device_id,
                 '$source_safe',
                 '$name_safe',
+                '$brand_safe',
+                '$model_safe',
                 '$sn_safe',
                 '$mac_safe',
                 $quantity,
@@ -279,7 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!$insert_result) {
 
             $skipped[] = array(
-                'name' => $device['name'],
+                'name' => device_display_label($device),
                 'reason' => 'Could not be added (database error).'
             );
 
@@ -302,7 +331,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         );
 
 
-        $added[] = $device['name'];
+        $added[] = device_display_label($device);
     }
 
 
@@ -765,7 +794,9 @@ body {
                                 <div class="device-name">
                                     <?php
                                     echo htmlspecialchars(
-                                        $device['name'],
+                                        trim($device['brand'] . ' ' . $device['model']) != ''
+                                            ? trim($device['brand'] . ' ' . $device['model'])
+                                            : $device['name'],
                                         ENT_QUOTES,
                                         'UTF-8'
                                     );

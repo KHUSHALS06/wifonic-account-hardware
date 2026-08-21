@@ -44,15 +44,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if ($error == '') {
+        $user_id = (int)$_SESSION['user_id'];
+
         $query = "
             INSERT INTO models (
                 brand_id,
                 model_name,
+                created_by,
                 created_at
             )
             VALUES (
                 $brand_id,
                 '$model_name_safe',
+                $user_id,
                 NOW()
             )
         ";
@@ -85,9 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 $brands = array();
 $brands_query = "
-    SELECT id, brand_name
+    SELECT id, name AS brand_name
     FROM brands
-    ORDER BY brand_name ASC
+    ORDER BY name ASC
 ";
 $brands_result = mysql_query($brands_query, $conn);
 if ($brands_result) {
@@ -98,10 +102,10 @@ if ($brands_result) {
 
 $models = array();
 $models_query = "
-    SELECT m.id, m.model_name, b.brand_name
+    SELECT m.id, m.model_name, b.name AS brand_name
     FROM models m
     INNER JOIN brands b ON b.id = m.brand_id
-    ORDER BY b.brand_name ASC, m.model_name ASC
+    ORDER BY b.name ASC, m.model_name ASC
 ";
 $models_result = mysql_query($models_query, $conn);
 if ($models_result) {

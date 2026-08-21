@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $check_query = "
             SELECT id
             FROM properties
-            WHERE property_name = '$property_name_safe'
+            WHERE name = '$property_name_safe'
             LIMIT 1
         ";
         $check_result = mysql_query($check_query, $conn);
@@ -42,16 +42,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($error == '') {
         $property_address_safe = mysql_real_escape_string($property_address, $conn);
+        $user_id = (int)$_SESSION['user_id'];
 
         $query = "
             INSERT INTO properties (
-                property_name,
-                property_address,
+                name,
+                address,
+                created_by,
                 created_at
             )
             VALUES (
                 '$property_name_safe',
                 '$property_address_safe',
+                $user_id,
                 NOW()
             )
         ";
@@ -85,9 +88,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 $properties = array();
 $list_query = "
-    SELECT id, property_name, property_address
+    SELECT id, name AS property_name, address AS property_address
     FROM properties
-    ORDER BY property_name ASC
+    ORDER BY name ASC
 ";
 $list_result = mysql_query($list_query, $conn);
 if ($list_result) {

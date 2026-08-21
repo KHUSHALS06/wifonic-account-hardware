@@ -19,12 +19,16 @@ $source = '';
 $purchase_date = '';
 $purchased_from = '';
 $purchase_price = '';
+$brand_id = 0;
+$model_id = 0;
+$brand = '';
+$model = '';
 
 $brands = array();
 $brands_query = "
-    SELECT id, brand_name
+    SELECT id, name AS brand_name
     FROM brands
-    ORDER BY brand_name ASC
+    ORDER BY name ASC
 ";
 $brands_result = mysql_query($brands_query, $conn);
 if ($brands_result) {
@@ -46,16 +50,16 @@ if ($models_result) {
     }
 }
 
-$suppliers = array();
-$suppliers_query = "
-    SELECT id, supplier_name
-    FROM suppliers
-    ORDER BY supplier_name ASC
+$couriers = array();
+$couriers_query = "
+    SELECT id, name
+    FROM couriers
+    ORDER BY name ASC
 ";
-$suppliers_result = mysql_query($suppliers_query, $conn);
-if ($suppliers_result) {
-    while ($row = mysql_fetch_assoc($suppliers_result)) {
-        $suppliers[] = $row;
+$couriers_result = mysql_query($couriers_query, $conn);
+if ($couriers_result) {
+    while ($row = mysql_fetch_assoc($couriers_result)) {
+        $couriers[] = $row;
     }
 }
 
@@ -92,6 +96,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $purchase_price = isset($_POST['purchase_price'])
         ? trim($_POST['purchase_price'])
+        : '';
+
+    $brand_id = isset($_POST['brand_id'])
+        ? (int)$_POST['brand_id']
+        : 0;
+
+    $model_id = isset($_POST['model_id'])
+        ? (int)$_POST['model_id']
+        : 0;
+
+    $brand = isset($_POST['brand'])
+        ? trim($_POST['brand'])
+        : '';
+
+    $model = isset($_POST['model'])
+        ? trim($_POST['model'])
         : '';
 
 
@@ -207,6 +227,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $conn
         );
 
+        $brand_safe = mysql_real_escape_string(
+            $brand,
+            $conn
+        );
+
+        $model_safe = mysql_real_escape_string(
+            $model,
+            $conn
+        );
+
 
         /*
          * NULL values
@@ -256,6 +286,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 mac,
                 quantity,
                 source,
+                brand_id,
+                model_id,
+                brand,
+                model,
                 purchase_date,
                 purchased_from,
                 purchase_price,
@@ -269,6 +303,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 '$mac_safe',
                 $quantity,
                 '$source_safe',
+                " . ($brand_id > 0 ? $brand_id : 'NULL') . ",
+                " . ($model_id > 0 ? $model_id : 'NULL') . ",
+                '$brand_safe',
+                '$model_safe',
                 $purchase_date_sql,
                 '$purchased_from_safe',
                 $purchase_price_sql,
@@ -306,6 +344,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     'mac' => $mac,
                     'quantity' => $quantity,
                     'source' => $source,
+                    'brand_id' => $brand_id,
+                    'model_id' => $model_id,
+                    'brand' => $brand,
+                    'model' => $model,
                     'purchase_date' => $purchase_date,
                     'purchased_from' => $purchased_from,
                     'purchase_price' => $purchase_price,
@@ -340,6 +382,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $purchase_date = '';
             $purchased_from = '';
             $purchase_price = '';
+            $brand_id = 0;
+            $model_id = 0;
+            $brand = '';
+            $model = '';
         }
     }
 }
@@ -865,6 +911,9 @@ select:focus {
                         <div class="combo-list"></div>
                     </div>
 
+                    <input type="hidden" id="brand_id" name="brand_id" value="<?php echo (int)$brand_id; ?>">
+                    <input type="hidden" id="brand" name="brand" value="<?php echo htmlspecialchars($brand, ENT_QUOTES, 'UTF-8'); ?>">
+
                 </div>
 
 
@@ -885,6 +934,9 @@ select:focus {
                         >
                         <div class="combo-list"></div>
                     </div>
+
+                    <input type="hidden" id="model_id" name="model_id" value="<?php echo (int)$model_id; ?>">
+                    <input type="hidden" id="model" name="model" value="<?php echo htmlspecialchars($model, ENT_QUOTES, 'UTF-8'); ?>">
 
                 </div>
 
@@ -1084,7 +1136,7 @@ select:focus {
                         Purchased From
                     </label>
 
-                    <div class="combo" data-combo="supplier">
+                    <div class="combo" data-combo="courier">
                         <input
                             type="text"
                             id="purchased_from"
@@ -1186,15 +1238,15 @@ var MODELS = <?php
     echo json_encode($model_rows);
 ?>;
 
-var SUPPLIERS = <?php
-    $supplier_rows = array();
-    foreach ($suppliers as $s) {
-        $supplier_rows[] = array(
-            'id' => (int)$s['id'],
-            'name' => $s['supplier_name']
+var COURIERS = <?php
+    $courier_rows = array();
+    foreach ($couriers as $c) {
+        $courier_rows[] = array(
+            'id' => (int)$c['id'],
+            'name' => $c['name']
         );
     }
-    echo json_encode($supplier_rows);
+    echo json_encode($courier_rows);
 ?>;
 
 function initCombo(root, items, onSelect) {
@@ -1253,6 +1305,10 @@ function initCombo(root, items, onSelect) {
 }
 
 var nameField = document.getElementById('name');
+var brandIdField = document.getElementById('brand_id');
+var brandTextField = document.getElementById('brand');
+var modelIdField = document.getElementById('model_id');
+var modelTextField = document.getElementById('model');
 var selectedBrand = null;
 var selectedModel = null;
 
@@ -1264,16 +1320,23 @@ function updateComposedName() {
 
 var brandRoot = document.querySelector('[data-combo="brand"]');
 var modelRoot = document.querySelector('[data-combo="model"]');
-var supplierRoot = document.querySelector('[data-combo="supplier"]');
+var supplierRoot = document.querySelector('[data-combo="courier"]');
 
 var modelCombo = initCombo(modelRoot, [], function (item) {
     selectedModel = item;
+    modelIdField.value = item.id;
+    modelTextField.value = item.name;
     updateComposedName();
 });
 
 var brandCombo = initCombo(brandRoot, BRANDS, function (item) {
     selectedBrand = item;
     selectedModel = null;
+
+    brandIdField.value = item.id;
+    brandTextField.value = item.name;
+    modelIdField.value = '';
+    modelTextField.value = '';
 
     var modelInput = modelRoot.querySelector('.combo-input');
     modelInput.value = '';
@@ -1288,7 +1351,7 @@ var brandCombo = initCombo(brandRoot, BRANDS, function (item) {
     updateComposedName();
 });
 
-initCombo(supplierRoot, SUPPLIERS, function (item) {
+initCombo(supplierRoot, COURIERS, function (item) {
 });
 </script>
 

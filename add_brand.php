@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $check_query = "
             SELECT id
             FROM brands
-            WHERE brand_name = '$brand_name_safe'
+            WHERE name = '$brand_name_safe'
             LIMIT 1
         ";
         $check_result = mysql_query($check_query, $conn);
@@ -37,13 +37,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if ($error == '') {
+        $user_id = (int)$_SESSION['user_id'];
+
         $query = "
             INSERT INTO brands (
-                brand_name,
+                name,
+                created_by,
                 created_at
             )
             VALUES (
                 '$brand_name_safe',
+                $user_id,
                 NOW()
             )
         ";
@@ -75,9 +79,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 $brands = array();
 $list_query = "
-    SELECT id, brand_name
+    SELECT id, name AS brand_name
     FROM brands
-    ORDER BY brand_name ASC
+    ORDER BY name ASC
 ";
 $list_result = mysql_query($list_query, $conn);
 if ($list_result) {

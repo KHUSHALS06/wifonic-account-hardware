@@ -13,6 +13,10 @@ $error = '';
 
 $device_id     = '';
 $name          = '';
+$brand         = '';
+$model         = '';
+$brand_id      = 0;
+$model_id      = 0;
 $sn            = '';
 $mac           = '';
 $quantity      = '1';
@@ -26,6 +30,32 @@ $allowed_sources = array(
     'Terminated Client',
     'Repaired'
 );
+
+$brands = array();
+$brands_query = "
+    SELECT id, name AS brand_name
+    FROM brands
+    ORDER BY name ASC
+";
+$brands_result = mysql_query($brands_query, $conn);
+if ($brands_result) {
+    while ($row = mysql_fetch_assoc($brands_result)) {
+        $brands[] = $row;
+    }
+}
+
+$models = array();
+$models_query = "
+    SELECT id, brand_id, model_name
+    FROM models
+    ORDER BY model_name ASC
+";
+$models_result = mysql_query($models_query, $conn);
+if ($models_result) {
+    while ($row = mysql_fetch_assoc($models_result)) {
+        $models[] = $row;
+    }
+}
 
 
 /*
@@ -45,6 +75,10 @@ if (
         SELECT
             id,
             name,
+            brand,
+            model,
+            brand_id,
+            model_id,
             sn,
             mac,
             quantity,
@@ -69,6 +103,10 @@ if (
 
         $device_id = $device['id'];
         $name      = $device['name'];
+        $brand     = $device['brand'];
+        $model     = $device['model'];
+        $brand_id  = (int)$device['brand_id'];
+        $model_id  = (int)$device['model_id'];
         $sn        = $device['sn'];
         $mac       = $device['mac'];
         $quantity  = $device['quantity'];
@@ -93,6 +131,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ? trim($_POST['name'])
         : '';
 
+    $brand = isset($_POST['brand'])
+        ? trim($_POST['brand'])
+        : '';
+
+    $model = isset($_POST['model'])
+        ? trim($_POST['model'])
+        : '';
+
+    $brand_id = isset($_POST['brand_id'])
+        ? (int)$_POST['brand_id']
+        : 0;
+
+    $model_id = isset($_POST['model_id'])
+        ? (int)$_POST['model_id']
+        : 0;
+
     $sn = isset($_POST['sn'])
         ? trim($_POST['sn'])
         : '';
@@ -112,6 +166,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $selling_price = isset($_POST['selling_price'])
         ? trim($_POST['selling_price'])
         : '';
+
+    if ($name == '' && ($brand != '' || $model != '')) {
+        $name = trim($brand . ' ' . $model);
+    }
 
 
     /*
@@ -265,6 +323,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $conn
         );
 
+        $brand_safe = mysql_real_escape_string(
+            $brand,
+            $conn
+        );
+
+        $model_safe = mysql_real_escape_string(
+            $model,
+            $conn
+        );
+
         $mac_safe = mysql_real_escape_string(
             $mac,
             $conn
@@ -306,6 +374,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 device_id,
                 source,
                 name,
+                brand,
+                model,
                 sn,
                 mac,
                 quantity,
@@ -317,6 +387,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $device_id_sql,
                 '$source_safe',
                 '$name_safe',
+                '$brand_safe',
+                '$model_safe',
                 '$sn_safe',
                 '$mac_safe',
                 $quantity,
@@ -362,6 +434,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                     'name' =>
                         $name,
+
+                    'brand' =>
+                        $brand,
+
+                    'model' =>
+                        $model,
 
                     'sn' =>
                         $sn,
@@ -1905,31 +1983,82 @@ tbody tr:hover {
             <div class="form-grid">
 
 
-                <!-- DEVICE NAME -->
+                <!-- BRAND / MODEL -->
 
                 <div class="form-group">
 
-                    <label>
-                        Device Name *
+                    <label for="brand_search">
+                        Brand
                     </label>
 
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="Device name"
-                        value="<?php
+                    <div class="combo" data-combo="brand">
+                        <input
+                            type="text"
+                            id="brand_search"
+                            class="combo-input"
+                            placeholder="Search brand..."
+                            autocomplete="off"
+                            value="<?php
+                            echo htmlspecialchars(
+                                $brand,
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
+                            ?>"
+                        >
+                        <div class="combo-list"></div>
+                    </div>
 
-                        echo htmlspecialchars(
-                            $name,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-
-                        ?>"
-                        required
-                    >
+                    <input type="hidden" id="brand_id" name="brand_id" value="<?php echo (int)$brand_id; ?>">
+                    <input type="hidden" id="brand" name="brand" value="<?php echo htmlspecialchars($brand, ENT_QUOTES, 'UTF-8'); ?>">
 
                 </div>
+
+
+                <div class="form-group">
+
+                    <label for="model_search">
+                        Model
+                    </label>
+
+                    <div class="combo" data-combo="model">
+                        <input
+                            type="text"
+                            id="model_search"
+                            class="combo-input"
+                            placeholder="<?php echo ($brand_id > 0) ? 'Search model...' : 'Select a brand first'; ?>"
+                            autocomplete="off"
+                            value="<?php
+                            echo htmlspecialchars(
+                                $model,
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
+                            ?>"
+                            <?php echo ($brand_id > 0) ? '' : 'disabled'; ?>
+                        >
+                        <div class="combo-list"></div>
+                    </div>
+
+                    <input type="hidden" id="model_id" name="model_id" value="<?php echo (int)$model_id; ?>">
+                    <input type="hidden" id="model" name="model" value="<?php echo htmlspecialchars($model, ENT_QUOTES, 'UTF-8'); ?>">
+
+                </div>
+
+
+                <input
+                    type="hidden"
+                    name="name"
+                    value="<?php
+
+                    echo htmlspecialchars(
+                        $name,
+                        ENT_QUOTES,
+                        'UTF-8'
+                    );
+
+                    ?>"
+                >
 
 
                 <!-- SN -->
@@ -2171,7 +2300,11 @@ tbody tr:hover {
                     <tr>
 
                         <th>
-                            Device
+                            Brand
+                        </th>
+
+                        <th>
+                            Model
                         </th>
 
                         <th>
@@ -2240,7 +2373,7 @@ tbody tr:hover {
                         <tr>
 
 
-                            <!-- DEVICE -->
+                            <!-- BRAND -->
 
                             <td>
 
@@ -2249,7 +2382,7 @@ tbody tr:hover {
                                     <?php
 
                                     echo htmlspecialchars(
-                                        $cart['name'],
+                                        $cart['brand'],
                                         ENT_QUOTES,
                                         'UTF-8'
                                     );
@@ -2257,6 +2390,23 @@ tbody tr:hover {
                                     ?>
 
                                 </strong>
+
+                            </td>
+
+
+                            <!-- MODEL -->
+
+                            <td>
+
+                                <?php
+
+                                echo htmlspecialchars(
+                                    $cart['model'],
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                );
+
+                                ?>
 
                             </td>
 
