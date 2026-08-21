@@ -8,6 +8,9 @@ require_once 'audit.php';
 
 require_login();
 
+$username = $_SESSION['username'];
+$role     = $_SESSION['role_name'];
+
 $error = '';
 $success = '';
 
@@ -114,11 +117,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ? trim($_POST['model'])
         : '';
 
-
-    /*
-     * Validation
-     */
-
     $allowed_sources = array(
         'Purchased',
         'Office',
@@ -126,7 +124,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         'Terminated Client',
         'Repaired'
     );
-
 
     if ($name == '') {
 
@@ -146,11 +143,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     }
 
-
-    /*
-     * Purchase information is optional.
-     */
-
     if ($error == '') {
 
         if ($purchase_price !== '') {
@@ -165,11 +157,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             }
         }
     }
-
-
-    /*
-     * Check duplicate SN.
-     */
 
     if ($error == '') {
 
@@ -199,11 +186,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $error = 'A device with this SN already exists.';
         }
     }
-
-
-    /*
-     * Insert device.
-     */
 
     if ($error == '') {
 
@@ -237,11 +219,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $conn
         );
 
-
-        /*
-         * NULL values
-         */
-
         if ($purchase_date == '') {
 
             $purchase_date_sql = 'NULL';
@@ -258,7 +235,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 "'$purchase_date_safe'";
         }
 
-
         if ($purchase_price == '') {
 
             $purchase_price_sql = 'NULL';
@@ -274,10 +250,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 "'";
         }
 
-
         $user_id =
             (int)$_SESSION['user_id'];
-
 
         $query = "
             INSERT INTO devices (
@@ -316,12 +290,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             )
         ";
 
-
         $result = mysql_query(
             $query,
             $conn
         );
-
 
         if (!$result) {
 
@@ -331,11 +303,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $device_id =
                 mysql_insert_id($conn);
-
-
-            /*
-             * Audit information.
-             */
 
             $new_data = json_encode(
                 array(
@@ -355,7 +322,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 )
             );
 
-
             audit_log_action(
                 'ADD_DEVICE',
                 $device_id,
@@ -365,14 +331,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $new_data
             );
 
-
             $success =
                 'Device added successfully to inventory.';
-
-
-            /*
-             * Clear form.
-             */
 
             $name = '';
             $sn = '';
@@ -423,6 +383,235 @@ body {
         Helvetica,
         sans-serif;
 
+    color: #000000;
+
+    min-height: 100vh;
+
+    background:
+        linear-gradient(
+            135deg,
+            #74ebd5 0%,
+            #acb6e5 100%
+        );
+
+    background-attachment: fixed;
+
+    animation:
+        fadeIn 0.5s ease;
+
+}
+
+
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+
+@keyframes slideDown {
+
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes riseIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+body:before {
+
+    content: "";
+
+    position: fixed;
+
+    width: 350px;
+    height: 350px;
+
+    border-radius: 50%;
+
+    top: -150px;
+    left: -100px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.18
+        );
+
+    pointer-events: none;
+
+}
+
+body:after {
+
+    content: "";
+
+    position: fixed;
+
+    width: 400px;
+    height: 400px;
+
+    border-radius: 50%;
+
+    right: -150px;
+    bottom: -180px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.16
+        );
+
+    pointer-events: none;
+
+}
+
+
+.header {
+
+    position: relative;
+
+    z-index: 10;
+
+    margin:
+        18px 25px 0;
+
+    min-height:
+        70px;
+
+    padding:
+        0 22px;
+
+    border-radius:
+        18px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        space-between;
+
+    gap:
+        20px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.42
+        );
+
+    border:
+        1px solid
+        rgba(
+            255,
+            255,
+            255,
+            0.60
+        );
+
+    box-shadow:
+        0 8px 30px
+        rgba(
+            31,
+            38,
+            135,
+            0.12
+        );
+
+    backdrop-filter:
+        blur(18px);
+
+    -webkit-backdrop-filter:
+        blur(18px);
+
+    animation:
+        slideDown 0.5s ease;
+
+}
+
+
+.logo {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        10px;
+
+    flex-shrink:
+        0;
+
+}
+
+
+.logo-icon {
+
+    width:
+        42px;
+
+    height:
+        42px;
+
+    border-radius:
+        12px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    color:
+        #000000;
+
+    font-size:
+        18px;
+
+    font-weight:
+        bold;
+
     background:
         linear-gradient(
             135deg,
@@ -430,30 +619,301 @@ body {
             #acb6e5
         );
 
-    min-height: 100vh;
+    transition:
+        transform 0.25s ease;
 
-    padding: 40px 20px;
+}
 
-    color: #333;
+
+.logo-icon:hover {
+
+    transform:
+        rotate(-8deg)
+        scale(1.05);
+
+}
+
+
+.logo-text {
+
+    font-size:
+        18px;
+
+    font-weight:
+        bold;
+
+    white-space:
+        nowrap;
+
+    color:
+        #000000;
+
+}
+
+
+.navigation {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        5px;
+
+    flex: 1;
+
+    justify-content:
+        center;
+
+}
+
+
+.nav-link {
+
+    padding:
+        10px 13px;
+
+    border-radius:
+        10px;
+
+    text-decoration:
+        none;
+
+    color:
+        #000000;
+
+    font-size:
+        12px;
+
+    font-weight:
+        bold;
+
+    transition:
+        0.2s;
+
+    white-space:
+        nowrap;
+
+}
+
+
+.nav-link:hover {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.45
+        );
+
+    transform:
+        translateY(-1px);
+
+}
+
+
+.nav-link.active {
+
+    color:
+        #000000;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.62
+        );
+
+    box-shadow:
+        0 4px 12px
+        rgba(
+            0,
+            0,
+            0,
+            0.05
+        );
+
+}
+
+
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: rgba(255, 255, 255, 0.95);
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    z-index: 1000;
+    padding: 8px 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: riseIn 0.2s ease;
+}
+
+.dropdown-content a {
+    display: block;
+    padding: 10px 18px;
+    text-decoration: none;
+    color: #000000;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.dropdown-content a:hover {
+    background: rgba(116, 235, 213, 0.2);
+    padding-left: 22px;
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+}
+
+
+.header-right {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        10px;
+
+    flex-shrink:
+        0;
+
+}
+
+
+.user-box {
+
+    padding:
+        8px 12px;
+
+    border-radius:
+        10px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.30
+        );
+
+    font-size:
+        12px;
+
+    color:
+        #000000;
+
+}
+
+
+.username {
+
+    font-weight:
+        bold;
+
+    color:
+        #000000;
+
+}
+
+
+.role {
+
+    margin-left:
+        5px;
+
+    color:
+        #000000;
+
+}
+
+
+.logout {
+
+    padding:
+        10px 14px;
+
+    border-radius:
+        9px;
+
+    color:
+        #000000;
+
+    text-decoration:
+        none;
+
+    font-size:
+        12px;
+
+    font-weight:
+        bold;
+
+    background:
+        rgba(
+            198,
+            40,
+            40,
+            0.55
+        );
+
+    transition:
+        0.2s ease;
+
+}
+
+
+.logout:hover {
+
+    background:
+        rgba(
+            198,
+            40,
+            40,
+            0.75
+        );
+
+    transform:
+        translateY(-1px);
+
 }
 
 
 .page {
 
+    position: relative;
+
+    z-index: 2;
+
     max-width: 900px;
 
     margin: 0 auto;
+
+    padding: 35px 20px 60px;
 }
 
 
 .glass-card {
 
     background:
-        rgba(255, 255, 255, 0.28);
+        rgba(255, 255, 255, 0.42);
 
     border:
         1px solid
-        rgba(255, 255, 255, 0.45);
+        rgba(255, 255, 255, 0.60);
 
     box-shadow:
         0 20px 50px
@@ -468,10 +928,13 @@ body {
     border-radius: 20px;
 
     padding: 35px;
+
+    animation:
+        riseIn 0.5s ease;
 }
 
 
-.header {
+.page-header {
 
     display: flex;
 
@@ -489,7 +952,7 @@ body {
 
     font-weight: bold;
 
-    color: #ffffff;
+    color: #000000;
 }
 
 
@@ -497,8 +960,7 @@ body {
 
     margin-top: 5px;
 
-    color:
-        rgba(255, 255, 255, 0.85);
+    color: #000000;
 
     font-size: 14px;
 }
@@ -508,19 +970,30 @@ body {
 
     text-decoration: none;
 
-    color: #ffffff;
+    color: #000000;
 
     background:
-        rgba(255,255,255,0.20);
+        rgba(255,255,255,0.40);
 
     border:
         1px solid
-        rgba(255,255,255,0.35);
+        rgba(255,255,255,0.55);
 
     padding:
         10px 16px;
 
     border-radius: 10px;
+
+    transition:
+        0.2s ease;
+}
+
+
+.back:hover {
+
+    transform:
+        translateY(-1px);
+
 }
 
 
@@ -533,32 +1006,33 @@ body {
     margin-bottom: 20px;
 
     font-size: 14px;
+
+    color: #000000;
+
+    animation:
+        riseIn 0.35s ease;
 }
 
 
 .error {
 
     background:
-        rgba(255, 80, 80, 0.15);
+        rgba(255, 80, 80, 0.20);
 
     border:
         1px solid
-        rgba(255, 80, 80, 0.30);
-
-    color: #9b1c1c;
+        rgba(255, 80, 80, 0.35);
 }
 
 
 .success {
 
     background:
-        rgba(0, 180, 100, 0.15);
+        rgba(0, 180, 100, 0.20);
 
     border:
         1px solid
-        rgba(0, 180, 100, 0.30);
-
-    color: #126b45;
+        rgba(0, 180, 100, 0.35);
 }
 
 
@@ -571,7 +1045,7 @@ body {
     margin:
         25px 0 18px;
 
-    color: #ffffff;
+    color: #000000;
 }
 
 
@@ -609,7 +1083,7 @@ label {
 
     margin-bottom: 7px;
 
-    color: #ffffff;
+    color: #000000;
 }
 
 
@@ -634,7 +1108,10 @@ select {
     background:
         rgba(255,255,255,0.72);
 
-    color: #333;
+    color: #000000;
+
+    transition:
+        0.2s ease;
 }
 
 
@@ -643,13 +1120,13 @@ select:focus {
 
     box-shadow:
         0 0 0 3px
-        rgba(116,235,213,0.30);
+        rgba(116,235,213,0.35);
 }
 
 
 .required {
 
-    color: #ffdddd;
+    color: #000000;
 }
 
 
@@ -679,15 +1156,26 @@ select:focus {
     font-size: 14px;
 
     font-weight: bold;
+
+    color: #000000;
+
+    transition:
+        0.2s ease;
+}
+
+
+.button:hover {
+
+    transform:
+        translateY(-1px);
+
 }
 
 
 .cancel {
 
     background:
-        rgba(255,255,255,0.30);
-
-    color: #ffffff;
+        rgba(255,255,255,0.45);
 
     text-decoration: none;
 }
@@ -702,17 +1190,9 @@ select:focus {
             #acb6e5
         );
 
-    color: #ffffff;
-
     box-shadow:
         0 8px 20px
         rgba(0,0,0,0.12);
-}
-
-
-.submit:hover {
-
-    opacity: 0.9;
 }
 
 
@@ -722,8 +1202,7 @@ select:focus {
 
     font-size: 12px;
 
-    color:
-        rgba(255,255,255,0.80);
+    color: #000000;
 }
 
 
@@ -739,7 +1218,7 @@ select:focus {
         grid-column: auto;
     }
 
-    .header {
+    .page-header {
 
         align-items: flex-start;
 
@@ -752,6 +1231,57 @@ select:focus {
 
         padding: 25px;
     }
+}
+
+@media (max-width: 1100px) {
+
+    .header {
+
+        flex-wrap:
+            wrap;
+
+        padding:
+            12px 18px;
+
+    }
+
+    .navigation {
+
+        order:
+            3;
+
+        width:
+            100%;
+
+        overflow-x:
+            auto;
+
+        justify-content:
+            flex-start;
+
+        padding-bottom:
+            3px;
+
+    }
+
+}
+
+@media (max-width: 700px) {
+
+    .header {
+
+        margin:
+            10px;
+
+    }
+
+    .user-box {
+
+        display:
+            none;
+
+    }
+
 }
 
 .combo {
@@ -767,11 +1297,12 @@ select:focus {
     padding: 0 13px;
     font-size: 14px;
     background: rgba(255,255,255,0.72);
-    color: #333;
+    color: #000000;
+    transition: 0.2s ease;
 }
 
 .combo-input:focus {
-    box-shadow: 0 0 0 3px rgba(116,235,213,0.30);
+    box-shadow: 0 0 0 3px rgba(116,235,213,0.35);
 }
 
 .combo-input:disabled {
@@ -791,6 +1322,7 @@ select:focus {
     border-radius: 10px;
     box-shadow: 0 12px 30px rgba(0,0,0,0.18);
     z-index: 50;
+    animation: riseIn 0.2s ease;
 }
 
 .combo-list.open {
@@ -800,19 +1332,21 @@ select:focus {
 .combo-option {
     padding: 10px 13px;
     font-size: 14px;
-    color: #333;
+    color: #000000;
     cursor: pointer;
+    transition: 0.15s ease;
 }
 
 .combo-option:hover,
 .combo-option.active {
-    background: rgba(116,235,213,0.25);
+    background: rgba(116,235,213,0.30);
+    padding-left: 17px;
 }
 
 .combo-empty {
     padding: 10px 13px;
     font-size: 13px;
-    color: #888;
+    color: #000000;
 }
 
 
@@ -822,11 +1356,143 @@ select:focus {
 
 <body>
 
+<div class="header">
+
+    <div class="logo">
+
+        <div class="logo-icon">
+            W
+        </div>
+
+        <div class="logo-text">
+            Wifonic Hardware
+        </div>
+
+    </div>
+
+    <nav class="navigation">
+
+        <a
+            href="dashboard.php"
+            class="nav-link"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="inventory.php"
+            class="nav-link"
+        >
+            Inventory
+        </a>
+
+        <a
+            href="add_device.php"
+            class="nav-link active"
+        >
+            Add Device
+        </a>
+
+        <a
+            href="sell.php"
+            class="nav-link"
+        >
+            Sell
+        </a>
+
+        <a
+            href="send.php"
+            class="nav-link"
+        >
+            Send
+        </a>
+
+        <?php if ($role === 'admin' || $role === 'manager') { ?>
+
+            <div class="dropdown">
+                <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">
+                    Management
+                </a>
+                <div class="dropdown-content" id="managementDropdown">
+                    <a href="add_brand.php">Add Brand</a>
+                    <a href="add_model.php">Add Model</a>
+                    <a href="add_property.php">Add Property</a>
+                    <a href="add_courier.php">Add Courier</a>
+                </div>
+            </div>
+
+        <?php } ?>
+
+        <?php if ($role === 'admin') { ?>
+
+            <a
+                href="users.php"
+                class="nav-link"
+            >
+                Users
+            </a>
+
+            <a
+                href="audit_log.php"
+                class="nav-link"
+            >
+                Audit Logs
+            </a>
+
+        <?php } ?>
+
+    </nav>
+
+    <div class="header-right">
+
+        <div class="user-box">
+
+            <span class="username">
+
+                <?php
+
+                echo htmlspecialchars(
+                    $username,
+                    ENT_QUOTES,
+                    'UTF-8'
+                );
+
+                ?>
+
+            </span>
+
+            <span class="role">
+
+                <?php
+
+                echo htmlspecialchars(
+                    $role,
+                    ENT_QUOTES,
+                    'UTF-8'
+                );
+
+                ?>
+
+            </span>
+
+        </div>
+
+        <a
+            href="logout.php"
+            class="logout"
+        >
+            Logout
+        </a>
+
+    </div>
+
+</div>
+
 <div class="page">
 
     <div class="glass-card">
 
-        <div class="header">
+        <div class="page-header">
 
             <div>
 
@@ -1170,7 +1836,7 @@ select:focus {
                         name="purchase_price"
                         min="0"
                         step="0.01"
-                        placeholder="₹ 0.00"
+                        placeholder="0.00"
                         value="<?php
                         echo htmlspecialchars(
                             $purchase_price,
@@ -1215,6 +1881,27 @@ select:focus {
 </div>
 
 <script>
+function toggleDropdown(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    var dropdown = document.getElementById('managementDropdown');
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.display = 'block';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    var dropdown = document.getElementById('managementDropdown');
+    var toggle = document.querySelector('.dropdown-toggle');
+    if (dropdown && toggle) {
+        if (!toggle.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    }
+});
+
 var BRANDS = <?php
     $brand_rows = array();
     foreach ($brands as $b) {

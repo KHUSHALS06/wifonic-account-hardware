@@ -15,6 +15,19 @@ $sent_to      = '';
 $property_name = '';
 $sent_date    = date('Y-m-d');
 
+$properties = array();
+$properties_query = "
+    SELECT id, name
+    FROM properties
+    ORDER BY name ASC
+";
+$properties_result = mysql_query($properties_query, $conn);
+if ($properties_result) {
+    while ($row = mysql_fetch_assoc($properties_result)) {
+        $properties[] = $row;
+    }
+}
+
 
 /*
  * =========================================================
@@ -321,6 +334,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     );
 
 
+                $brand_safe =
+                    mysql_real_escape_string(
+                        $cart['brand'],
+                        $conn
+                    );
+
+
+                $model_safe =
+                    mysql_real_escape_string(
+                        $cart['model'],
+                        $conn
+                    );
+
+
                 $sn_safe =
                     mysql_real_escape_string(
                         $cart['sn'],
@@ -375,6 +402,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         device_id,
                         source,
                         name,
+                        brand,
+                        model,
                         sn,
                         mac,
                         quantity,
@@ -388,6 +417,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                         $device_id_sql,
                         '$source_safe',
                         '$name_safe',
+                        '$brand_safe',
+                        '$model_safe',
                         '$sn_safe',
                         '$mac_safe',
                         $quantity,
@@ -1650,6 +1681,62 @@ td {
 
 }
 
+.combo {
+    position: relative;
+}
+
+.combo-input {
+    width: 100%;
+    height: 45px;
+    border: none;
+    outline: none;
+    border-radius: 10px;
+    padding: 0 13px;
+    font-size: 14px;
+    background: rgba(255,255,255,0.72);
+    color: #333;
+}
+
+.combo-input:focus {
+    box-shadow: 0 0 0 3px rgba(116,235,213,0.30);
+}
+
+.combo-list {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    z-index: 50;
+}
+
+.combo-list.open {
+    display: block;
+}
+
+.combo-option {
+    padding: 10px 13px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+.combo-option:hover,
+.combo-option.active {
+    background: rgba(116,235,213,0.25);
+}
+
+.combo-empty {
+    padding: 10px 13px;
+    font-size: 13px;
+    color: #888;
+}
+
 </style>
 
 </head>
@@ -1818,6 +1905,14 @@ td {
                 <tr>
 
                     <th>
+                        Brand
+                    </th>
+
+                    <th>
+                        Model
+                    </th>
+
+                    <th>
                         Device
                     </th>
 
@@ -1858,6 +1953,40 @@ td {
 
 
                     <tr>
+
+
+                        <td>
+
+                            <strong>
+
+                                <?php
+
+                                echo htmlspecialchars(
+                                    $cart['brand'],
+                                    ENT_QUOTES,
+                                    'UTF-8'
+                                );
+
+                                ?>
+
+                            </strong>
+
+                        </td>
+
+
+                        <td>
+
+                            <?php
+
+                            echo htmlspecialchars(
+                                $cart['model'],
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
+
+                            ?>
+
+                        </td>
 
 
                         <td>
@@ -2024,20 +2153,26 @@ td {
                         Property
                     </label>
 
-                    <input
-                        type="text"
-                        name="property_name"
-                        placeholder="Property name"
-                        value="<?php
+                    <div class="combo" data-combo="property">
+                        <input
+                            type="text"
+                            id="property_search"
+                            name="property_name"
+                            class="combo-input"
+                            placeholder="Search or type a property..."
+                            autocomplete="off"
+                            value="<?php
 
-                        echo htmlspecialchars(
-                            $property_name,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
+                            echo htmlspecialchars(
+                                $property_name,
+                                ENT_QUOTES,
+                                'UTF-8'
+                            );
 
-                        ?>"
-                    >
+                            ?>"
+                        >
+                        <div class="combo-list"></div>
+                    </div>
 
                 </div>
 
@@ -2100,6 +2235,81 @@ td {
 
 </div>
 
+
+<script>
+var PROPERTIES = <?php
+    $property_rows = array();
+    foreach ($properties as $p) {
+        $property_rows[] = array(
+            'id' => (int)$p['id'],
+            'name' => $p['name']
+        );
+    }
+    echo json_encode($property_rows);
+?>;
+
+function initCombo(root, items, onSelect) {
+    var input = root.querySelector('.combo-input');
+    var list = root.querySelector('.combo-list');
+
+    function render(filterText) {
+        var text = filterText.toLowerCase();
+        var matches = items.filter(function (item) {
+            return item.name.toLowerCase().indexOf(text) !== -1;
+        });
+
+        list.innerHTML = '';
+
+        if (matches.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'combo-empty';
+            empty.textContent = 'No matches';
+            list.appendChild(empty);
+        } else {
+            matches.forEach(function (item) {
+                var option = document.createElement('div');
+                option.className = 'combo-option';
+                option.textContent = item.name;
+                option.addEventListener('click', function () {
+                    input.value = item.name;
+                    list.classList.remove('open');
+                    onSelect(item);
+                });
+                list.appendChild(option);
+            });
+        }
+    }
+
+    input.addEventListener('focus', function () {
+        render(input.value);
+        list.classList.add('open');
+    });
+
+    input.addEventListener('input', function () {
+        render(input.value);
+        list.classList.add('open');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!root.contains(e.target)) {
+            list.classList.remove('open');
+        }
+    });
+
+    return {
+        setItems: function (newItems) {
+            items = newItems;
+        }
+    };
+}
+
+var propertyRoot = document.querySelector('[data-combo="property"]');
+
+if (propertyRoot) {
+    initCombo(propertyRoot, PROPERTIES, function (item) {
+    });
+}
+</script>
 
 </body>
 

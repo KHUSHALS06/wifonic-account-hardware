@@ -16,12 +16,6 @@ $search_safe = mysql_real_escape_string(
     $conn
 );
 
-
-/*
- * Only show devices that are still in
- * stock — purchased and not yet sold
- * or sent out.
- */
 $query = "
     SELECT
         id,
@@ -37,7 +31,6 @@ $query = "
     AND quantity > 0
 ";
 
-
 if ($search != '') {
 
     $query .= "
@@ -51,17 +44,14 @@ if ($search != '') {
 
 }
 
-
 $query .= "
     ORDER BY id DESC
 ";
-
 
 $result = mysql_query(
     $query,
     $conn
 );
-
 
 if (!$result) {
 
@@ -72,9 +62,7 @@ if (!$result) {
 
 }
 
-
 $devices = array();
-
 
 while ($row = mysql_fetch_assoc($result)) {
 
@@ -104,19 +92,18 @@ while ($row = mysql_fetch_assoc($result)) {
 
 <style>
 
-/* =========================================================
-   RESET
-   ========================================================= */
-
 * {
     box-sizing: border-box;
 }
 
 html,
 body {
+
     margin: 0;
     padding: 0;
+
     min-height: 100%;
+
 }
 
 body {
@@ -126,7 +113,9 @@ body {
         Helvetica,
         sans-serif;
 
-    color: #263238;
+    color: #000000;
+
+    min-height: 100vh;
 
     background:
         linear-gradient(
@@ -137,13 +126,67 @@ body {
 
     background-attachment: fixed;
 
-    min-height: 100vh;
+    animation:
+        fadeIn 0.5s ease;
+
 }
 
 
-/* =========================================================
-   BACKGROUND
-   ========================================================= */
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+
+@keyframes slideDown {
+
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes riseIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes spin {
+
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+
+}
+
 
 body:before {
 
@@ -151,23 +194,24 @@ body:before {
 
     position: fixed;
 
-    width: 320px;
-    height: 320px;
+    width: 350px;
+    height: 350px;
 
     border-radius: 50%;
+
+    top: -150px;
+    left: -100px;
 
     background:
         rgba(
             255,
             255,
             255,
-            0.20
+            0.18
         );
 
-    top: -120px;
-    left: -90px;
-
     pointer-events: none;
+
 }
 
 body:after {
@@ -176,10 +220,13 @@ body:after {
 
     position: fixed;
 
-    width: 360px;
-    height: 360px;
+    width: 400px;
+    height: 400px;
 
     border-radius: 50%;
+
+    right: -150px;
+    bottom: -180px;
 
     background:
         rgba(
@@ -189,16 +236,10 @@ body:after {
             0.16
         );
 
-    bottom: -150px;
-    right: -100px;
-
     pointer-events: none;
+
 }
 
-
-/* =========================================================
-   HEADER
-   ========================================================= */
 
 .header {
 
@@ -206,26 +247,36 @@ body:after {
 
     z-index: 10;
 
-    margin: 18px 25px 0;
+    margin:
+        18px 25px 0;
 
-    min-height: 70px;
+    min-height:
+        70px;
 
-    padding: 0 25px;
+    padding:
+        0 22px;
 
-    border-radius: 18px;
+    border-radius:
+        18px;
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    justify-content: space-between;
+    justify-content:
+        space-between;
+
+    gap:
+        20px;
 
     background:
         rgba(
             255,
             255,
             255,
-            0.45
+            0.42
         );
 
     border:
@@ -251,37 +302,58 @@ body:after {
 
     -webkit-backdrop-filter:
         blur(18px);
+
+    animation:
+        slideDown 0.5s ease;
+
 }
 
-
-/* Logo */
 
 .logo {
 
-    display: flex;
+    display:
+        flex;
 
-    align-items: center;
+    align-items:
+        center;
 
-    gap: 12px;
+    gap:
+        10px;
+
+    flex-shrink:
+        0;
+
 }
+
 
 .logo-icon {
 
-    width: 42px;
-    height: 42px;
+    width:
+        42px;
 
-    border-radius: 12px;
+    height:
+        42px;
 
-    display: flex;
+    border-radius:
+        12px;
 
-    align-items: center;
-    justify-content: center;
+    display:
+        flex;
 
-    color: #ffffff;
+    align-items:
+        center;
 
-    font-size: 20px;
+    justify-content:
+        center;
 
-    font-weight: bold;
+    color:
+        #000000;
+
+    font-size:
+        18px;
+
+    font-weight:
+        bold;
 
     background:
         linear-gradient(
@@ -290,53 +362,89 @@ body:after {
             #acb6e5
         );
 
-    box-shadow:
-        0 6px 18px
-        rgba(
-            116,
-            235,
-            213,
-            0.25
-        );
+    transition:
+        transform 0.25s ease;
+
 }
+
+
+.logo-icon:hover {
+
+    transform:
+        rotate(-8deg)
+        scale(1.05);
+
+}
+
 
 .logo-text {
 
-    font-size: 19px;
+    font-size:
+        18px;
 
-    font-weight: bold;
+    font-weight:
+        bold;
+
+    white-space:
+        nowrap;
+
+    color:
+        #000000;
+
 }
 
 
-/* Header right */
+.navigation {
 
-.header-right {
+    display:
+        flex;
 
-    display: flex;
+    align-items:
+        center;
 
-    align-items: center;
+    gap:
+        5px;
 
-    gap: 15px;
+    flex: 1;
+
+    justify-content:
+        center;
+
 }
 
-.user-box {
+
+.nav-link {
 
     padding:
-        8px 14px;
+        10px 13px;
 
     border-radius:
+        10px;
+
+    text-decoration:
+        none;
+
+    color:
+        #000000;
+
+    font-size:
         12px;
 
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.35
-        );
+    font-weight:
+        bold;
 
-    border:
-        1px solid
+    transition:
+        0.2s;
+
+    white-space:
+        nowrap;
+
+}
+
+
+.nav-link:hover {
+
+    background:
         rgba(
             255,
             255,
@@ -344,48 +452,172 @@ body:after {
             0.45
         );
 
-    font-size: 13px;
+    transform:
+        translateY(-1px);
+
 }
 
-.username {
 
-    font-weight: bold;
+.nav-link.active {
+
+    color:
+        #000000;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.62
+        );
+
+    box-shadow:
+        0 4px 12px
+        rgba(
+            0,
+            0,
+            0,
+            0.05
+        );
+
 }
 
-.role {
 
-    margin-left: 5px;
-
-    color: #666;
+.dropdown {
+    position: relative;
+    display: inline-block;
 }
 
-.logout {
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: rgba(255, 255, 255, 0.95);
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    z-index: 1000;
+    padding: 8px 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: riseIn 0.2s ease;
+}
 
+.dropdown-content a {
+    display: block;
+    padding: 10px 18px;
     text-decoration: none;
+    color: #000000;
+    font-size: 13px;
+    transition: 0.2s;
+}
 
-    color: #ffffff;
+.dropdown-content a:hover {
+    background: rgba(116, 235, 213, 0.2);
+    padding-left: 22px;
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+}
+
+
+.header-right {
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    gap:
+        10px;
+
+    flex-shrink:
+        0;
+
+}
+
+
+.user-box {
 
     padding:
-        10px 17px;
+        8px 12px;
 
     border-radius:
         10px;
 
-    font-size: 13px;
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.30
+        );
 
-    font-weight: bold;
+    font-size:
+        12px;
+
+    color:
+        #000000;
+
+}
+
+
+.username {
+
+    font-weight:
+        bold;
+
+    color:
+        #000000;
+
+}
+
+
+.role {
+
+    margin-left:
+        5px;
+
+    color:
+        #000000;
+
+}
+
+
+.logout {
+
+    padding:
+        10px 14px;
+
+    border-radius:
+        9px;
+
+    color:
+        #000000;
+
+    text-decoration:
+        none;
+
+    font-size:
+        12px;
+
+    font-weight:
+        bold;
 
     background:
         rgba(
             198,
             40,
             40,
-            0.82
+            0.55
         );
 
     transition:
         0.2s ease;
+
 }
+
 
 .logout:hover {
 
@@ -394,94 +626,87 @@ body:after {
             198,
             40,
             40,
-            0.95
+            0.75
         );
 
     transform:
         translateY(-1px);
+
 }
 
-
-/* =========================================================
-   MAIN
-   ========================================================= */
 
 .container {
 
-    position: relative;
+    position:
+        relative;
 
-    z-index: 2;
+    z-index:
+        2;
 
-    max-width: 1500px;
+    max-width:
+        1500px;
 
-    margin: 0 auto;
+    margin:
+        0 auto;
 
     padding:
-        40px 25px 60px;
+        38px 25px 60px;
+
 }
 
 
-/* =========================================================
-   PAGE HEADER
-   ========================================================= */
-
 .page-header {
 
-    display: flex;
-
-    justify-content:
-        space-between;
+    display:
+        flex;
 
     align-items:
         flex-end;
 
+    justify-content:
+        space-between;
+
     margin-bottom:
         25px;
+
+    animation:
+        riseIn 0.4s ease;
+
 }
+
 
 .page-title {
 
-    margin: 0;
+    margin:
+        0;
 
     font-size:
         30px;
 
     font-weight:
         700;
+
+    color:
+        #000000;
+
 }
+
 
 .page-subtitle {
 
     margin-top:
         7px;
 
+    color:
+        #000000;
+
     font-size:
         14px;
 
-    color:
-        rgba(
-            38,
-            50,
-            56,
-            0.65
-        );
 }
 
 
-/* =========================================================
-   ADD BUTTON
-   ========================================================= */
-
 .add-button {
-
-    display:
-        inline-flex;
-
-    align-items:
-        center;
-
-    gap:
-        8px;
 
     height:
         44px;
@@ -489,14 +714,29 @@ body:after {
     padding:
         0 20px;
 
-    text-decoration:
+    border:
         none;
 
     border-radius:
         11px;
 
+    display:
+        inline-flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    gap:
+        8px;
+
+    text-decoration:
+        none;
+
     color:
-        #263238;
+        #000000;
 
     font-size:
         13px;
@@ -522,18 +762,17 @@ body:after {
 
     transition:
         0.2s ease;
+
 }
+
 
 .add-button:hover {
 
     transform:
         translateY(-2px);
+
 }
 
-
-/* =========================================================
-   SEARCH
-   ========================================================= */
 
 .search-card {
 
@@ -577,7 +816,12 @@ body:after {
 
     -webkit-backdrop-filter:
         blur(16px);
+
+    animation:
+        riseIn 0.45s ease;
+
 }
+
 
 .search-form {
 
@@ -586,7 +830,9 @@ body:after {
 
     gap:
         10px;
+
 }
+
 
 .search-wrapper {
 
@@ -595,7 +841,9 @@ body:after {
 
     flex:
         1;
+
 }
+
 
 .search-icon {
 
@@ -612,11 +860,13 @@ body:after {
         translateY(-50%);
 
     color:
-        #777;
+        #000000;
 
     font-size:
         15px;
+
 }
+
 
 .search-input {
 
@@ -653,11 +903,16 @@ body:after {
         );
 
     color:
-        #263238;
+        #000000;
 
     font-size:
         14px;
+
+    transition:
+        0.2s ease;
+
 }
+
 
 .search-input:focus {
 
@@ -675,9 +930,11 @@ body:after {
             116,
             235,
             213,
-            0.16
+            0.20
         );
+
 }
+
 
 .search-button {
 
@@ -697,7 +954,7 @@ body:after {
         pointer;
 
     color:
-        #263238;
+        #000000;
 
     font-size:
         13px;
@@ -711,7 +968,20 @@ body:after {
             #74ebd5,
             #acb6e5
         );
+
+    transition:
+        0.2s ease;
+
 }
+
+
+.search-button:hover {
+
+    transform:
+        translateY(-1px);
+
+}
+
 
 .clear-button {
 
@@ -734,7 +1004,7 @@ body:after {
         11px;
 
     color:
-        #555;
+        #000000;
 
     background:
         rgba(
@@ -743,12 +1013,25 @@ body:after {
             255,
             0.45
         );
+
+    transition:
+        0.2s ease;
+
 }
 
 
-/* =========================================================
-   TABLE
-   ========================================================= */
+.clear-button:hover {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.65
+        );
+
+}
+
 
 .inventory-card {
 
@@ -789,13 +1072,20 @@ body:after {
 
     -webkit-backdrop-filter:
         blur(18px);
+
+    animation:
+        riseIn 0.5s ease;
+
 }
+
 
 .table-wrapper {
 
     overflow-x:
         auto;
+
 }
+
 
 table {
 
@@ -804,7 +1094,9 @@ table {
 
     border-collapse:
         collapse;
+
 }
+
 
 thead {
 
@@ -815,7 +1107,9 @@ thead {
             255,
             0.30
         );
+
 }
+
 
 th {
 
@@ -835,12 +1129,7 @@ th {
         0.5px;
 
     color:
-        rgba(
-            38,
-            50,
-            56,
-            0.65
-        );
+        #000000;
 
     border-bottom:
         1px solid
@@ -853,7 +1142,9 @@ th {
 
     white-space:
         nowrap;
+
 }
+
 
 td {
 
@@ -862,6 +1153,9 @@ td {
 
     font-size:
         13px;
+
+    color:
+        #000000;
 
     border-bottom:
         1px solid
@@ -874,13 +1168,20 @@ td {
 
     white-space:
         nowrap;
+
 }
+
 
 tbody tr {
 
     transition:
         0.18s ease;
+
+    animation:
+        riseIn 0.4s ease;
+
 }
+
 
 tbody tr:hover {
 
@@ -891,24 +1192,28 @@ tbody tr:hover {
             255,
             0.25
         );
+
 }
+
 
 tbody tr:last-child td {
 
     border-bottom:
         none;
+
 }
 
-
-/* =========================================================
-   DEVICE
-   ========================================================= */
 
 .device-name {
 
     font-weight:
         bold;
+
+    color:
+        #000000;
+
 }
+
 
 .mono {
 
@@ -920,14 +1225,21 @@ tbody tr:last-child td {
         12px;
 
     color:
-        #555;
+        #000000;
+
 }
+
 
 .price {
 
     font-weight:
         bold;
+
+    color:
+        #000000;
+
 }
+
 
 .quantity {
 
@@ -936,12 +1248,12 @@ tbody tr:last-child td {
 
     text-align:
         center;
+
+    color:
+        #000000;
+
 }
 
-
-/* =========================================================
-   SELECT
-   ========================================================= */
 
 .select-cell {
 
@@ -950,7 +1262,9 @@ tbody tr:last-child td {
 
     text-align:
         center;
+
 }
+
 
 .device-checkbox {
 
@@ -965,12 +1279,9 @@ tbody tr:last-child td {
 
     accent-color:
         #74ebd5;
+
 }
 
-
-/* =========================================================
-   ACTIONS
-   ========================================================= */
 
 .action {
 
@@ -995,6 +1306,9 @@ tbody tr:last-child td {
     text-decoration:
         none;
 
+    color:
+        #000000;
+
     font-size:
         12px;
 
@@ -1003,18 +1317,22 @@ tbody tr:last-child td {
 
     transition:
         0.2s ease;
+
 }
+
 
 .action:hover {
 
     transform:
         translateY(-1px);
+
 }
+
 
 .send-button {
 
     color:
-        #263238;
+        #000000;
 
     background:
         rgba(
@@ -1023,12 +1341,14 @@ tbody tr:last-child td {
             213,
             0.65
         );
+
 }
+
 
 .sell-button {
 
     color:
-        #263238;
+        #000000;
 
     background:
         rgba(
@@ -1037,12 +1357,9 @@ tbody tr:last-child td {
             229,
             0.75
         );
+
 }
 
-
-/* =========================================================
-   BULK BAR
-   ========================================================= */
 
 .bulk-bar {
 
@@ -1077,13 +1394,20 @@ tbody tr:last-child td {
             255,
             0.45
         );
+
 }
+
 
 .bulk-bar.active {
 
     display:
         flex;
+
+    animation:
+        riseIn 0.25s ease;
+
 }
+
 
 .selected-count {
 
@@ -1092,7 +1416,12 @@ tbody tr:last-child td {
 
     font-weight:
         bold;
+
+    color:
+        #000000;
+
 }
+
 
 .bulk-actions {
 
@@ -1101,7 +1430,9 @@ tbody tr:last-child td {
 
     gap:
         8px;
+
 }
+
 
 .bulk-button {
 
@@ -1120,35 +1451,44 @@ tbody tr:last-child td {
     cursor:
         pointer;
 
+    color:
+        #000000;
+
     font-size:
         12px;
 
     font-weight:
         bold;
+
+    transition:
+        0.2s ease;
+
 }
+
+
+.bulk-button:hover {
+
+    transform:
+        translateY(-1px);
+
+}
+
 
 .bulk-send {
 
-    color:
-        #263238;
-
     background:
         #74ebd5;
+
 }
+
 
 .bulk-sell {
 
-    color:
-        #263238;
-
     background:
         #acb6e5;
+
 }
 
-
-/* =========================================================
-   EMPTY
-   ========================================================= */
 
 .empty {
 
@@ -1156,8 +1496,13 @@ tbody tr:last-child td {
         center;
 
     padding:
-        70px 20px;
+        80px 20px;
+
+    animation:
+        fadeIn 0.5s ease;
+
 }
+
 
 .empty-icon {
 
@@ -1183,7 +1528,13 @@ tbody tr:last-child td {
         center;
 
     font-size:
-        27px;
+        22px;
+
+    font-weight:
+        bold;
+
+    color:
+        #000000;
 
     background:
         rgba(
@@ -1192,33 +1543,74 @@ tbody tr:last-child td {
             255,
             0.40
         );
+
+    animation:
+        spin 2.5s linear infinite;
+
 }
+
 
 .empty-title {
 
     font-size:
-        18px;
+        19px;
 
     font-weight:
         bold;
 
     margin-bottom:
         7px;
+
+    color:
+        #000000;
+
 }
 
+
 .empty-text {
+
+    color:
+        #000000;
 
     font-size:
         13px;
 
-    color:
-        #777;
 }
 
 
-/* =========================================================
-   MOBILE
-   ========================================================= */
+@media (max-width: 1100px) {
+
+    .header {
+
+        flex-wrap:
+            wrap;
+
+        padding:
+            12px 18px;
+
+    }
+
+    .navigation {
+
+        order:
+            3;
+
+        width:
+            100%;
+
+        overflow-x:
+            auto;
+
+        justify-content:
+            flex-start;
+
+        padding-bottom:
+            3px;
+
+    }
+
+}
+
 
 @media (max-width: 800px) {
 
@@ -1227,20 +1619,20 @@ tbody tr:last-child td {
         margin:
             10px;
 
-        padding:
-            0 15px;
     }
 
     .user-box {
 
         display:
             none;
+
     }
 
     .container {
 
         padding:
             30px 12px 40px;
+
     }
 
     .page-header {
@@ -1253,6 +1645,7 @@ tbody tr:last-child td {
 
         gap:
             15px;
+
     }
 
     .add-button {
@@ -1262,18 +1655,21 @@ tbody tr:last-child td {
 
         justify-content:
             center;
+
     }
 
     .search-form {
 
         flex-wrap:
             wrap;
+
     }
 
     .search-wrapper {
 
         flex-basis:
             100%;
+
     }
 
     .search-button,
@@ -1284,6 +1680,7 @@ tbody tr:last-child td {
 
         justify-content:
             center;
+
     }
 
     .bulk-bar {
@@ -1293,18 +1690,21 @@ tbody tr:last-child td {
 
         flex-direction:
             column;
+
     }
 
     .bulk-actions {
 
         width:
             100%;
+
     }
 
     .bulk-button {
 
         flex:
             1;
+
     }
 
 }
@@ -1316,13 +1716,7 @@ tbody tr:last-child td {
 
 <body>
 
-
-<!-- =====================================================
-     HEADER
-     ===================================================== -->
-
 <div class="header">
-
 
     <div class="logo">
 
@@ -1336,9 +1730,80 @@ tbody tr:last-child td {
 
     </div>
 
+    <nav class="navigation">
+
+        <a
+            href="dashboard.php"
+            class="nav-link"
+        >
+            Dashboard
+        </a>
+
+        <a
+            href="inventory.php"
+            class="nav-link active"
+        >
+            Inventory
+        </a>
+
+        <a
+            href="add_device.php"
+            class="nav-link"
+        >
+            Add Device
+        </a>
+
+        <a
+            href="sell.php"
+            class="nav-link"
+        >
+            Sell
+        </a>
+
+        <a
+            href="send.php"
+            class="nav-link"
+        >
+            Send
+        </a>
+
+        <?php if ($role === 'admin' || $role === 'manager') { ?>
+
+            <div class="dropdown">
+                <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">
+                    Management
+                </a>
+                <div class="dropdown-content" id="managementDropdown">
+                    <a href="add_brand.php">Add Brand</a>
+                    <a href="add_model.php">Add Model</a>
+                    <a href="add_property.php">Add Property</a>
+                    <a href="add_courier.php">Add Courier</a>
+                </div>
+            </div>
+
+        <?php } ?>
+
+        <?php if ($role === 'admin') { ?>
+
+            <a
+                href="users.php"
+                class="nav-link"
+            >
+                Users
+            </a>
+
+            <a
+                href="audit_log.php"
+                class="nav-link"
+            >
+                Audit Logs
+            </a>
+
+        <?php } ?>
+
+    </nav>
 
     <div class="header-right">
-
 
         <div class="user-box">
 
@@ -1372,7 +1837,6 @@ tbody tr:last-child td {
 
         </div>
 
-
         <a
             href="logout.php"
             class="logout"
@@ -1385,15 +1849,10 @@ tbody tr:last-child td {
 </div>
 
 
-<!-- =====================================================
-     MAIN
-     ===================================================== -->
-
 <div class="container">
 
 
     <div class="page-header">
-
 
         <div>
 
@@ -1406,7 +1865,6 @@ tbody tr:last-child td {
             </div>
 
         </div>
-
 
         <?php if (
             $role == 'admin' ||
@@ -1422,16 +1880,10 @@ tbody tr:last-child td {
 
         <?php } ?>
 
-
     </div>
 
 
-    <!-- =================================================
-         SEARCH
-         ================================================= -->
-
     <div class="search-card">
-
 
         <form
             method="get"
@@ -1439,12 +1891,7 @@ tbody tr:last-child td {
             class="search-form"
         >
 
-
             <div class="search-wrapper">
-
-                <span class="search-icon">
-                    🔍
-                </span>
 
                 <input
                     type="text"
@@ -1464,14 +1911,12 @@ tbody tr:last-child td {
 
             </div>
 
-
             <button
                 type="submit"
                 class="search-button"
             >
                 Search
             </button>
-
 
             <?php if (
                 $search != ''
@@ -1486,26 +1931,17 @@ tbody tr:last-child td {
 
             <?php } ?>
 
-
         </form>
 
     </div>
 
 
-    <!-- =================================================
-         INVENTORY TABLE
-         ================================================= -->
-
     <div class="inventory-card">
-
-
-        <!-- BULK BAR -->
 
         <div
             id="bulkBar"
             class="bulk-bar"
         >
-
 
             <div
                 id="selectedCount"
@@ -1514,9 +1950,7 @@ tbody tr:last-child td {
                 0 selected
             </div>
 
-
             <div class="bulk-actions">
-
 
                 <button
                     type="button"
@@ -1526,7 +1960,6 @@ tbody tr:last-child td {
                     Send Selected
                 </button>
 
-
                 <button
                     type="button"
                     class="bulk-button bulk-sell"
@@ -1535,23 +1968,17 @@ tbody tr:last-child td {
                     Add to Sell Cart
                 </button>
 
-
             </div>
-
 
         </div>
 
-
         <div class="table-wrapper">
 
-
             <table>
-
 
                 <thead>
 
                     <tr>
-
 
                         <th class="select-cell">
 
@@ -1564,21 +1991,17 @@ tbody tr:last-child td {
 
                         </th>
 
-
                         <th>
                             Name
                         </th>
-
 
                         <th>
                             SN
                         </th>
 
-
                         <th>
                             MAC
                         </th>
-
 
                         <?php if (
                             $role == 'admin' ||
@@ -1591,39 +2014,31 @@ tbody tr:last-child td {
 
                         <?php } ?>
 
-
                         <th>
                             Date of Purchase
                         </th>
-
 
                         <th>
                             Purchased From
                         </th>
 
-
                         <th>
                             Available Qty
                         </th>
-
 
                         <th>
                             Action
                         </th>
 
-
                     </tr>
 
                 </thead>
 
-
                 <tbody>
-
 
                 <?php if (
                     count($devices) == 0
                 ) { ?>
-
 
                     <tr>
 
@@ -1633,16 +2048,13 @@ tbody tr:last-child td {
 
                             <div class="empty">
 
-
                                 <div class="empty-icon">
-                                    📦
+                                    0
                                 </div>
-
 
                                 <div class="empty-title">
                                     Inventory is empty
                                 </div>
-
 
                                 <div class="empty-text">
 
@@ -1662,26 +2074,19 @@ tbody tr:last-child td {
 
                                 </div>
 
-
                             </div>
 
                         </td>
 
                     </tr>
 
-
                 <?php } else { ?>
-
 
                     <?php foreach (
                         $devices as $device
                     ) { ?>
 
-
                         <tr>
-
-
-                            <!-- SELECT -->
 
                             <td
                                 class="select-cell"
@@ -1698,9 +2103,6 @@ tbody tr:last-child td {
                                 >
 
                             </td>
-
-
-                            <!-- NAME -->
 
                             <td>
 
@@ -1722,9 +2124,6 @@ tbody tr:last-child td {
 
                             </td>
 
-
-                            <!-- SN -->
-
                             <td>
 
                                 <span
@@ -1744,9 +2143,6 @@ tbody tr:last-child td {
                                 </span>
 
                             </td>
-
-
-                            <!-- MAC -->
 
                             <td>
 
@@ -1768,7 +2164,7 @@ tbody tr:last-child td {
 
                                     } else {
 
-                                        echo '—';
+                                        echo '-';
 
                                     }
 
@@ -1778,14 +2174,10 @@ tbody tr:last-child td {
 
                             </td>
 
-
-                            <!-- PRICE -->
-
                             <?php if (
                                 $role == 'admin' ||
                                 $role == 'manager'
                             ) { ?>
-
 
                                 <td>
 
@@ -1808,7 +2200,7 @@ tbody tr:last-child td {
 
                                         } else {
 
-                                            echo '—';
+                                            echo '-';
 
                                         }
 
@@ -1818,11 +2210,7 @@ tbody tr:last-child td {
 
                                 </td>
 
-
                             <?php } ?>
-
-
-                            <!-- PURCHASE DATE -->
 
                             <td>
 
@@ -1838,9 +2226,6 @@ tbody tr:last-child td {
 
                             </td>
 
-
-                            <!-- PURCHASED FROM -->
-
                             <td>
 
                                 <?php
@@ -1855,9 +2240,6 @@ tbody tr:last-child td {
 
                             </td>
 
-
-                            <!-- QUANTITY -->
-
                             <td
                                 class="quantity"
                             >
@@ -1871,11 +2253,7 @@ tbody tr:last-child td {
 
                             </td>
 
-
-                            <!-- ACTION -->
-
                             <td>
-
 
                                 <a
                                     href="send_device.php?id=<?php
@@ -1887,7 +2265,6 @@ tbody tr:last-child td {
                                     Send
                                 </a>
 
-
                                 <a
                                     href="sell_device.php?id=<?php
                                         echo (int)
@@ -1898,226 +2275,126 @@ tbody tr:last-child td {
                                     Sell
                                 </a>
 
-
                             </td>
-
 
                         </tr>
 
-
                     <?php } ?>
-
 
                 <?php } ?>
 
-
                 </tbody>
-
 
             </table>
 
-
         </div>
 
-
     </div>
-
 
 </div>
 
 
 <script>
 
-/*
- * Select all
- */
+function toggleDropdown(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    var dropdown = document.getElementById('managementDropdown');
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.display = 'block';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    var dropdown = document.getElementById('managementDropdown');
+    var toggle = document.querySelector('.dropdown-toggle');
+    if (dropdown && toggle) {
+        if (!toggle.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    }
+});
 
 function toggleAll(source) {
 
-    var checkboxes =
-        document.getElementsByClassName(
-            'device-select'
-        );
+    var checkboxes = document.getElementsByClassName('device-select');
 
-    for (
-        var i = 0;
-        i < checkboxes.length;
-        i++
-    ) {
-
-        checkboxes[i].checked =
-            source.checked;
-
+    for (var i = 0; i < checkboxes.length; i++) {
+        checkboxes[i].checked = source.checked;
     }
 
     updateSelection();
 }
 
-
-/*
- * Update selected count
- */
-
 function updateSelection() {
 
-    var checkboxes =
-        document.getElementsByClassName(
-            'device-select'
-        );
+    var checkboxes = document.getElementsByClassName('device-select');
 
     var selected = [];
 
-    for (
-        var i = 0;
-        i < checkboxes.length;
-        i++
-    ) {
-
-        if (
-            checkboxes[i].checked
-        ) {
-
-            selected.push(
-                checkboxes[i].value
-            );
-
+    for (var i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked) {
+            selected.push(checkboxes[i].value);
         }
-
     }
 
+    var bulkBar = document.getElementById('bulkBar');
+    var selectedCount = document.getElementById('selectedCount');
 
-    var bulkBar =
-        document.getElementById(
-            'bulkBar'
-        );
-
-    var selectedCount =
-        document.getElementById(
-            'selectedCount'
-        );
-
-
-    if (
-        selected.length > 0
-    ) {
-
-        bulkBar.className =
-            'bulk-bar active';
-
-        selectedCount.innerHTML =
-            selected.length +
-            ' selected';
-
+    if (selected.length > 0) {
+        bulkBar.className = 'bulk-bar active';
+        selectedCount.innerHTML = selected.length + ' selected';
     } else {
-
-        bulkBar.className =
-            'bulk-bar';
-
-        selectedCount.innerHTML =
-            '0 selected';
-
+        bulkBar.className = 'bulk-bar';
+        selectedCount.innerHTML = '0 selected';
     }
 
 }
 
-
-/*
- * Get selected IDs
- */
-
 function getSelected() {
 
-    var checkboxes =
-        document.getElementsByClassName(
-            'device-select'
-        );
+    var checkboxes = document.getElementsByClassName('device-select');
 
     var selected = [];
 
-    for (
-        var i = 0;
-        i < checkboxes.length;
-        i++
-    ) {
-
-        if (
-            checkboxes[i].checked
-        ) {
-
-            selected.push(
-                checkboxes[i].value
-            );
-
+    for (var i = 0; i < checkboxes.length; i++) {
+        if (checkboxes[i].checked) {
+            selected.push(checkboxes[i].value);
         }
-
     }
 
     return selected;
 }
 
-
-/*
- * Send selected devices
- */
-
 function sendSelected() {
 
-    var selected =
-        getSelected();
+    var selected = getSelected();
 
-
-    if (
-        selected.length == 0
-    ) {
-
-        alert(
-            'Please select at least one device.'
-        );
-
+    if (selected.length == 0) {
+        alert('Please select at least one device.');
         return;
-
     }
 
-
-    window.location =
-        'send_device.php?ids=' +
-        selected.join(',');
+    window.location = 'send_device.php?ids=' + selected.join(',');
 
 }
 
-
-/*
- * Add selected devices to
- * sell cart
- */
-
 function sellSelected() {
 
-    var selected =
-        getSelected();
+    var selected = getSelected();
 
-
-    if (
-        selected.length == 0
-    ) {
-
-        alert(
-            'Please select at least one device.'
-        );
-
+    if (selected.length == 0) {
+        alert('Please select at least one device.');
         return;
-
     }
 
-
-    window.location =
-        'sell_device.php?ids=' +
-        selected.join(',');
+    window.location = 'sell_device.php?ids=' + selected.join(',');
 
 }
 
 </script>
-
 
 </body>
 

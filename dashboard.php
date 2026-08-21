@@ -13,7 +13,6 @@ if (isset($_GET['search'])) {
     $search = trim($_GET['search']);
 }
 
-
 if (
     isset($_GET['delete']) &&
     ctype_digit($_GET['delete'])
@@ -76,7 +75,6 @@ if (
     exit;
 }
 
-
 $status_filter = '';
 
 if (isset($_GET['status'])) {
@@ -88,7 +86,6 @@ $allowed_statuses = array('Available', 'Sold', 'Sent');
 if (!in_array($status_filter, $allowed_statuses, true)) {
     $status_filter = '';
 }
-
 
 $where = "
     WHERE 1 = 1
@@ -125,7 +122,6 @@ if ($search != '') {
         )
     ";
 }
-
 
 $query = "
     SELECT
@@ -233,7 +229,7 @@ body {
         Helvetica,
         sans-serif;
 
-    color: #263238;
+    color: #000000;
 
     min-height: 100vh;
 
@@ -245,6 +241,65 @@ body {
         );
 
     background-attachment: fixed;
+
+    animation:
+        fadeIn 0.5s ease;
+
+}
+
+
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+
+@keyframes slideDown {
+
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes riseIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes spin {
+
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 
 }
 
@@ -364,6 +419,9 @@ body:after {
     -webkit-backdrop-filter:
         blur(18px);
 
+    animation:
+        slideDown 0.5s ease;
+
 }
 
 
@@ -405,7 +463,7 @@ body:after {
         center;
 
     color:
-        #ffffff;
+        #000000;
 
     font-size:
         18px;
@@ -420,6 +478,18 @@ body:after {
             #acb6e5
         );
 
+    transition:
+        transform 0.25s ease;
+
+}
+
+
+.logo-icon:hover {
+
+    transform:
+        rotate(-8deg)
+        scale(1.05);
+
 }
 
 
@@ -433,6 +503,9 @@ body:after {
 
     white-space:
         nowrap;
+
+    color:
+        #000000;
 
 }
 
@@ -468,7 +541,7 @@ body:after {
         none;
 
     color:
-        #455a64;
+        #000000;
 
     font-size:
         12px;
@@ -495,13 +568,16 @@ body:after {
             0.45
         );
 
+    transform:
+        translateY(-1px);
+
 }
 
 
 .nav-link.active {
 
     color:
-        #263238;
+        #000000;
 
     background:
         rgba(
@@ -539,19 +615,21 @@ body:after {
     padding: 8px 0;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    animation: riseIn 0.2s ease;
 }
 
 .dropdown-content a {
     display: block;
     padding: 10px 18px;
     text-decoration: none;
-    color: #263238;
+    color: #000000;
     font-size: 13px;
     transition: 0.2s;
 }
 
 .dropdown-content a:hover {
     background: rgba(116, 235, 213, 0.2);
+    padding-left: 22px;
 }
 
 .dropdown-toggle {
@@ -595,6 +673,9 @@ body:after {
     font-size:
         12px;
 
+    color:
+        #000000;
+
 }
 
 
@@ -602,6 +683,9 @@ body:after {
 
     font-weight:
         bold;
+
+    color:
+        #000000;
 
 }
 
@@ -612,7 +696,7 @@ body:after {
         5px;
 
     color:
-        #666;
+        #000000;
 
 }
 
@@ -626,7 +710,7 @@ body:after {
         9px;
 
     color:
-        #ffffff;
+        #000000;
 
     text-decoration:
         none;
@@ -642,8 +726,27 @@ body:after {
             198,
             40,
             40,
-            0.82
+            0.55
         );
+
+    transition:
+        0.2s ease;
+
+}
+
+
+.logout:hover {
+
+    background:
+        rgba(
+            198,
+            40,
+            40,
+            0.75
+        );
+
+    transform:
+        translateY(-1px);
 
 }
 
@@ -682,6 +785,9 @@ body:after {
     margin-bottom:
         22px;
 
+    animation:
+        riseIn 0.4s ease;
+
 }
 
 
@@ -696,6 +802,9 @@ body:after {
     font-weight:
         700;
 
+    color:
+        #000000;
+
 }
 
 
@@ -705,12 +814,7 @@ body:after {
         7px;
 
     color:
-        rgba(
-            38,
-            50,
-            56,
-            0.65
-        );
+        #000000;
 
     font-size:
         14px;
@@ -745,7 +849,7 @@ body:after {
         none;
 
     color:
-        #263238;
+        #000000;
 
     font-size:
         13px;
@@ -759,6 +863,17 @@ body:after {
             #74ebd5,
             #acb6e5
         );
+
+    transition:
+        0.2s ease;
+
+}
+
+
+.add-button:hover {
+
+    transform:
+        translateY(-2px);
 
 }
 
@@ -802,6 +917,9 @@ body:after {
 
     -webkit-backdrop-filter:
         blur(18px);
+
+    animation:
+        riseIn 0.5s ease;
 
 }
 
@@ -868,8 +986,14 @@ body:after {
             0.55
         );
 
+    color:
+        #000000;
+
     font-size:
         14px;
+
+    transition:
+        0.2s ease;
 
 }
 
@@ -927,6 +1051,9 @@ body:after {
             0.55
         );
 
+    color:
+        #000000;
+
     font-size:
         13px;
 
@@ -953,6 +1080,9 @@ body:after {
     cursor:
         pointer;
 
+    color:
+        #000000;
+
     background:
         rgba(
             255,
@@ -966,6 +1096,17 @@ body:after {
 
     font-weight:
         bold;
+
+    transition:
+        0.2s ease;
+
+}
+
+
+.search-button:hover {
+
+    transform:
+        translateY(-1px);
 
 }
 
@@ -991,7 +1132,7 @@ body:after {
         10px;
 
     color:
-        #555;
+        #000000;
 
     background:
         rgba(
@@ -1003,6 +1144,22 @@ body:after {
 
     font-size:
         13px;
+
+    transition:
+        0.2s ease;
+
+}
+
+
+.clear-search:hover {
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.55
+        );
 
 }
 
@@ -1060,12 +1217,7 @@ th {
         0.4px;
 
     color:
-        rgba(
-            38,
-            50,
-            56,
-            0.68
-        );
+        #000000;
 
     white-space:
         nowrap;
@@ -1081,6 +1233,9 @@ td {
     font-size:
         13px;
 
+    color:
+        #000000;
+
     white-space:
         nowrap;
 
@@ -1092,6 +1247,14 @@ td {
             255,
             0.30
         );
+
+}
+
+
+tbody tr {
+
+    animation:
+        riseIn 0.4s ease;
 
 }
 
@@ -1114,6 +1277,9 @@ tbody tr:hover {
     font-weight:
         bold;
 
+    color:
+        #000000;
+
 }
 
 
@@ -1125,6 +1291,9 @@ tbody tr:hover {
 
     font-size:
         12px;
+
+    color:
+        #000000;
 
 }
 
@@ -1148,6 +1317,9 @@ tbody tr:hover {
             0.42
         );
 
+    color:
+        #000000;
+
     font-size:
         11px;
 
@@ -1169,14 +1341,14 @@ tbody tr:hover {
         8px;
 
     color:
-        #2e7d32;
+        #000000;
 
     background:
         rgba(
             76,
             175,
             80,
-            0.14
+            0.20
         );
 
     font-size:
@@ -1190,15 +1362,12 @@ tbody tr:hover {
 
 .status-sold {
 
-    color:
-        #1565c0;
-
     background:
         rgba(
             33,
             150,
             243,
-            0.14
+            0.20
         );
 
 }
@@ -1206,15 +1375,12 @@ tbody tr:hover {
 
 .status-sent {
 
-    color:
-        #e65100;
-
     background:
         rgba(
             255,
             152,
             0,
-            0.16
+            0.22
         );
 
 }
@@ -1235,12 +1401,7 @@ tbody tr:hover {
         normal;
 
     color:
-        rgba(
-            38,
-            50,
-            56,
-            0.65
-        );
+        #000000;
 
     white-space:
         normal;
@@ -1271,7 +1432,7 @@ tbody tr:hover {
         none;
 
     color:
-        #37474f;
+        #000000;
 
     background:
         rgba(
@@ -1287,6 +1448,9 @@ tbody tr:hover {
     font-weight:
         bold;
 
+    transition:
+        0.2s ease;
+
 }
 
 
@@ -1300,20 +1464,23 @@ tbody tr:hover {
             0.70
         );
 
+    transform:
+        translateY(-1px);
+
 }
 
 
 .action-delete {
 
     color:
-        #c62828;
+        #000000;
 
     background:
         rgba(
             239,
             83,
             80,
-            0.10
+            0.20
         );
 
 }
@@ -1327,16 +1494,54 @@ tbody tr:hover {
     text-align:
         center;
 
+    animation:
+        fadeIn 0.5s ease;
+
 }
 
 
 .empty-icon {
 
-    font-size:
-        40px;
+    width:
+        65px;
 
-    margin-bottom:
-        12px;
+    height:
+        65px;
+
+    margin:
+        0 auto 12px;
+
+    border-radius:
+        18px;
+
+    display:
+        flex;
+
+    align-items:
+        center;
+
+    justify-content:
+        center;
+
+    font-size:
+        22px;
+
+    font-weight:
+        bold;
+
+    color:
+        #000000;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.40
+        );
+
+    animation:
+        spin 2.5s linear infinite;
 
 }
 
@@ -1352,13 +1557,16 @@ tbody tr:hover {
     margin-bottom:
         7px;
 
+    color:
+        #000000;
+
 }
 
 
 .empty-text {
 
     color:
-        #777;
+        #000000;
 
     font-size:
         13px;
@@ -1516,7 +1724,7 @@ tbody tr:hover {
         </a>
 
         <?php if ($role === 'admin' || $role === 'manager') { ?>
-            
+
             <div class="dropdown">
                 <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">
                     Management
@@ -1528,7 +1736,7 @@ tbody tr:hover {
                     <a href="add_courier.php">Add Courier</a>
                 </div>
             </div>
-            
+
         <?php } ?>
 
         <?php if ($role === 'admin') { ?>
@@ -2088,7 +2296,7 @@ tbody tr:hover {
             <div class="empty">
 
                 <div class="empty-icon">
-                    📦
+                    0
                 </div>
 
                 <div class="empty-title">

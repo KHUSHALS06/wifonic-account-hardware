@@ -1788,6 +1788,67 @@ tbody tr:hover {
 
 }
 
+.combo {
+    position: relative;
+}
+
+.combo-input {
+    width: 100%;
+    height: 45px;
+    border: none;
+    outline: none;
+    border-radius: 10px;
+    padding: 0 13px;
+    font-size: 14px;
+    background: rgba(255,255,255,0.72);
+    color: #333;
+}
+
+.combo-input:focus {
+    box-shadow: 0 0 0 3px rgba(116,235,213,0.30);
+}
+
+.combo-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.combo-list {
+    display: none;
+    position: absolute;
+    top: 50px;
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+    z-index: 50;
+}
+
+.combo-list.open {
+    display: block;
+}
+
+.combo-option {
+    padding: 10px 13px;
+    font-size: 14px;
+    color: #333;
+    cursor: pointer;
+}
+
+.combo-option:hover,
+.combo-option.active {
+    background: rgba(116,235,213,0.25);
+}
+
+.combo-empty {
+    padding: 10px 13px;
+    font-size: 13px;
+    color: #888;
+}
+
 </style>
 
 </head>
@@ -2666,6 +2727,128 @@ tbody tr:hover {
 
 </div>
 
+
+<script>
+var BRANDS = <?php
+    $brand_rows = array();
+    foreach ($brands as $b) {
+        $brand_rows[] = array(
+            'id' => (int)$b['id'],
+            'name' => $b['brand_name']
+        );
+    }
+    echo json_encode($brand_rows);
+?>;
+
+var MODELS = <?php
+    $model_rows = array();
+    foreach ($models as $m) {
+        $model_rows[] = array(
+            'id' => (int)$m['id'],
+            'brand_id' => (int)$m['brand_id'],
+            'name' => $m['model_name']
+        );
+    }
+    echo json_encode($model_rows);
+?>;
+
+function initCombo(root, items, onSelect) {
+    var input = root.querySelector('.combo-input');
+    var list = root.querySelector('.combo-list');
+
+    function render(filterText) {
+        var text = filterText.toLowerCase();
+        var matches = items.filter(function (item) {
+            return item.name.toLowerCase().indexOf(text) !== -1;
+        });
+
+        list.innerHTML = '';
+
+        if (matches.length === 0) {
+            var empty = document.createElement('div');
+            empty.className = 'combo-empty';
+            empty.textContent = 'No matches';
+            list.appendChild(empty);
+        } else {
+            matches.forEach(function (item) {
+                var option = document.createElement('div');
+                option.className = 'combo-option';
+                option.textContent = item.name;
+                option.addEventListener('click', function () {
+                    input.value = item.name;
+                    list.classList.remove('open');
+                    onSelect(item);
+                });
+                list.appendChild(option);
+            });
+        }
+    }
+
+    input.addEventListener('focus', function () {
+        render(input.value);
+        list.classList.add('open');
+    });
+
+    input.addEventListener('input', function () {
+        render(input.value);
+        list.classList.add('open');
+    });
+
+    document.addEventListener('click', function (e) {
+        if (!root.contains(e.target)) {
+            list.classList.remove('open');
+        }
+    });
+
+    return {
+        setItems: function (newItems) {
+            items = newItems;
+        }
+    };
+}
+
+var brandIdField = document.getElementById('brand_id');
+var brandTextField = document.getElementById('brand');
+var modelIdField = document.getElementById('model_id');
+var modelTextField = document.getElementById('model');
+var selectedBrand = null;
+var selectedModel = null;
+
+var currentBrandId = <?php echo (int)$brand_id; ?>;
+
+var brandRoot = document.querySelector('[data-combo="brand"]');
+var modelRoot = document.querySelector('[data-combo="model"]');
+
+var initialModels = MODELS.filter(function (m) {
+    return m.brand_id === currentBrandId;
+});
+
+var modelCombo = initCombo(modelRoot, initialModels, function (item) {
+    selectedModel = item;
+    modelIdField.value = item.id;
+    modelTextField.value = item.name;
+});
+
+var brandCombo = initCombo(brandRoot, BRANDS, function (item) {
+    selectedBrand = item;
+    selectedModel = null;
+
+    brandIdField.value = item.id;
+    brandTextField.value = item.name;
+    modelIdField.value = '';
+    modelTextField.value = '';
+
+    var modelInput = modelRoot.querySelector('.combo-input');
+    modelInput.value = '';
+    modelInput.disabled = false;
+    modelInput.placeholder = 'Search model...';
+
+    var filteredModels = MODELS.filter(function (m) {
+        return m.brand_id === item.id;
+    });
+    modelCombo.setItems(filteredModels);
+});
+</script>
 
 </body>
 
