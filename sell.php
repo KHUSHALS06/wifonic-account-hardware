@@ -541,28 +541,16 @@ if (!$cart_result) {
 
 <style>
 
-/* =========================================================
-   RESET
-   ========================================================= */
-
 * {
     box-sizing: border-box;
 }
 
 html,
 body {
-
     margin: 0;
     padding: 0;
-
     min-height: 100%;
-
 }
-
-
-/* =========================================================
-   BODY
-   ========================================================= */
 
 body {
 
@@ -571,11 +559,9 @@ body {
         Helvetica,
         sans-serif;
 
-    color:
-        #263238;
+    color: #000000;
 
-    min-height:
-        100vh;
+    min-height: 100vh;
 
     background:
         linear-gradient(
@@ -584,23 +570,115 @@ body {
             #acb6e5 100%
         );
 
-    background-attachment:
-        fixed;
+    background-attachment: fixed;
+
+    animation:
+        fadeIn 0.5s ease;
 
 }
 
 
-/* =========================================================
-   GLASS HEADER
-   ========================================================= */
+@keyframes fadeIn {
+
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+
+}
+
+
+@keyframes slideDown {
+
+    from {
+        opacity: 0;
+        transform: translateY(-12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+@keyframes riseIn {
+
+    from {
+        opacity: 0;
+        transform: translateY(14px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+}
+
+
+body:before {
+
+    content: "";
+
+    position: fixed;
+
+    width: 350px;
+    height: 350px;
+
+    border-radius: 50%;
+
+    top: -150px;
+    left: -100px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.18
+        );
+
+    pointer-events: none;
+
+}
+
+body:after {
+
+    content: "";
+
+    position: fixed;
+
+    width: 400px;
+    height: 400px;
+
+    border-radius: 50%;
+
+    right: -150px;
+    bottom: -180px;
+
+    background:
+        rgba(
+            255,
+            255,
+            255,
+            0.16
+        );
+
+    pointer-events: none;
+
+}
+
 
 .header {
 
-    position:
-        relative;
+    position: relative;
 
-    z-index:
-        10;
+    z-index: 10;
 
     margin:
         18px 25px 0;
@@ -658,12 +736,11 @@ body {
     -webkit-backdrop-filter:
         blur(18px);
 
+    animation:
+        slideDown 0.5s ease;
+
 }
 
-
-/* =========================================================
-   LOGO
-   ========================================================= */
 
 .logo {
 
@@ -703,7 +780,7 @@ body {
         center;
 
     color:
-        #ffffff;
+        #000000;
 
     font-size:
         18px;
@@ -717,6 +794,18 @@ body {
             #74ebd5,
             #acb6e5
         );
+
+    transition:
+        transform 0.25s ease;
+
+}
+
+
+.logo-icon:hover {
+
+    transform:
+        rotate(-8deg)
+        scale(1.05);
 
 }
 
@@ -732,12 +821,11 @@ body {
     white-space:
         nowrap;
 
+    color:
+        #000000;
+
 }
 
-
-/* =========================================================
-   NAVIGATION
-   ========================================================= */
 
 .navigation {
 
@@ -747,14 +835,13 @@ body {
     align-items:
         center;
 
-    justify-content:
-        center;
-
     gap:
         5px;
 
-    flex:
-        1;
+    flex: 1;
+
+    justify-content:
+        center;
 
 }
 
@@ -771,7 +858,7 @@ body {
         none;
 
     color:
-        #455a64;
+        #000000;
 
     font-size:
         12px;
@@ -779,11 +866,11 @@ body {
     font-weight:
         bold;
 
-    white-space:
-        nowrap;
-
     transition:
         0.2s;
+
+    white-space:
+        nowrap;
 
 }
 
@@ -798,13 +885,16 @@ body {
             0.45
         );
 
+    transform:
+        translateY(-1px);
+
 }
 
 
 .nav-link.active {
 
     color:
-        #263238;
+        #000000;
 
     background:
         rgba(
@@ -826,9 +916,43 @@ body {
 }
 
 
-/* =========================================================
-   USER AREA
-   ========================================================= */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    background: rgba(255, 255, 255, 0.95);
+    min-width: 180px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    z-index: 1000;
+    padding: 8px 0;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: riseIn 0.2s ease;
+}
+
+.dropdown-content a {
+    display: block;
+    padding: 10px 18px;
+    text-decoration: none;
+    color: #000000;
+    font-size: 13px;
+    transition: 0.2s;
+}
+
+.dropdown-content a:hover {
+    background: rgba(116, 235, 213, 0.2);
+    padding-left: 22px;
+}
+
+.dropdown-toggle {
+    cursor: pointer;
+}
+
 
 .header-right {
 
@@ -866,6 +990,9 @@ body {
     font-size:
         12px;
 
+    color:
+        #000000;
+
 }
 
 
@@ -873,6 +1000,9 @@ body {
 
     font-weight:
         bold;
+
+    color:
+        #000000;
 
 }
 
@@ -883,7 +1013,7 @@ body {
         5px;
 
     color:
-        #666;
+        #000000;
 
 }
 
@@ -897,7 +1027,7 @@ body {
         9px;
 
     color:
-        #ffffff;
+        #000000;
 
     text-decoration:
         none;
@@ -913,10 +1043,30 @@ body {
             198,
             40,
             40,
-            0.82
+            0.55
         );
 
+    transition:
+        0.2s ease;
+
 }
+
+
+.logout:hover {
+
+    background:
+        rgba(
+            198,
+            40,
+            40,
+            0.75
+        );
+
+    transform:
+        translateY(-1px);
+
+}
+
 
 
 /* =========================================================
@@ -1887,6 +2037,13 @@ tbody tr:hover {
         </a>
 
         <a
+            href="inventory.php"
+            class="nav-link"
+        >
+            Inventory
+        </a>
+
+        <a
             href="add_device.php"
             class="nav-link"
         >
@@ -1906,6 +2063,40 @@ tbody tr:hover {
         >
             Send
         </a>
+
+        <?php if ($role === 'admin' || $role === 'manager') { ?>
+
+            <div class="dropdown">
+                <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">
+                    Management
+                </a>
+                <div class="dropdown-content" id="managementDropdown">
+                    <a href="add_brand.php">Add Brand</a>
+                    <a href="add_model.php">Add Model</a>
+                    <a href="add_property.php">Add Property</a>
+                    <a href="add_courier.php">Add Courier</a>
+                </div>
+            </div>
+
+        <?php } ?>
+
+        <?php if ($role === 'admin') { ?>
+
+            <a
+                href="users.php"
+                class="nav-link"
+            >
+                Users
+            </a>
+
+            <a
+                href="audit_log.php"
+                class="nav-link"
+            >
+                Audit Logs
+            </a>
+
+        <?php } ?>
 
     </nav>
 
@@ -2729,6 +2920,27 @@ tbody tr:hover {
 
 
 <script>
+function toggleDropdown(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    var dropdown = document.getElementById('managementDropdown');
+    if (dropdown.style.display === 'block') {
+        dropdown.style.display = 'none';
+    } else {
+        dropdown.style.display = 'block';
+    }
+}
+
+document.addEventListener('click', function(event) {
+    var dropdown = document.getElementById('managementDropdown');
+    var toggle = document.querySelector('.dropdown-toggle');
+    if (dropdown && toggle) {
+        if (!toggle.contains(event.target) && !dropdown.contains(event.target)) {
+            dropdown.style.display = 'none';
+        }
+    }
+});
+
 var BRANDS = <?php
     $brand_rows = array();
     foreach ($brands as $b) {
