@@ -186,6 +186,9 @@ if (!$result) {
     );
 }
 
+// Check if user can view price
+$can_view_price = ($role === 'admin' || $role === 'manager');
+
 ?>
 
 <!DOCTYPE html>
@@ -1733,7 +1736,7 @@ tbody tr:hover {
                     <a href="add_brand.php">Add Brand</a>
                     <a href="add_model.php">Add Model</a>
                     <a href="add_property.php">Add Property</a>
-                    <a href="add_courier.php">Add Courier</a>
+                    <a href="add_courier.php">Add Purchased From</a>
                 </div>
             </div>
 
@@ -1938,9 +1941,7 @@ tbody tr:hover {
                             SN
                         </th>
 
-                        <th>
-                            MAC
-                        </th>
+                        <!-- MAC column removed from view -->
 
                         <th>
                             Quantity
@@ -1958,9 +1959,11 @@ tbody tr:hover {
                             Purchased From
                         </th>
 
-                        <th>
-                            Price
-                        </th>
+                        <?php if ($can_view_price) { ?>
+                            <th>
+                                Price
+                            </th>
+                        <?php } ?>
 
                         <th>
                             Status
@@ -2019,26 +2022,7 @@ tbody tr:hover {
 
                             </td>
 
-                            <td>
-
-                                <span class="mono">
-
-                                    <?php
-
-                                    echo $device['mac']
-                                        != ''
-                                        ? htmlspecialchars(
-                                            $device['mac'],
-                                            ENT_QUOTES,
-                                            'UTF-8'
-                                        )
-                                        : '';
-
-                                    ?>
-
-                                </span>
-
-                            </td>
+                            <!-- MAC column removed from view - no data displayed -->
 
                             <td>
 
@@ -2105,34 +2089,36 @@ tbody tr:hover {
 
                             </td>
 
-                            <td>
+                            <?php if ($can_view_price) { ?>
+                                <td>
 
-                                <?php
+                                    <?php
 
-                                if (
-                                    $device[
-                                        'purchase_price'
-                                    ] !== null
-                                ) {
+                                    if (
+                                        $device[
+                                            'purchase_price'
+                                        ] !== null
+                                    ) {
 
-                                    echo '₹' .
-                                        number_format(
-                                            (float)
-                                            $device[
-                                                'purchase_price'
-                                            ],
-                                            2
-                                        );
+                                        echo '₹' .
+                                            number_format(
+                                                (float)
+                                                $device[
+                                                    'purchase_price'
+                                                ],
+                                                2
+                                            );
 
-                                } else {
+                                    } else {
 
-                                    echo '';
+                                        echo '';
 
-                                }
+                                    }
 
-                                ?>
+                                    ?>
 
-                            </td>
+                                </td>
+                            <?php } ?>
 
                             <td>
 

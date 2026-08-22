@@ -78,7 +78,8 @@ function device_display_label($device)
 
 /*
  * =========================================================
- * STEP 1 (GET): SHOW A PRICE FOR EACH SELECTED DEVICE
+ * STEP 1 (GET): SHOW A PRICE + QUANTITY FIELD FOR EACH
+ * SELECTED DEVICE
  * =========================================================
  */
 
@@ -99,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST') {
                 FROM devices
                 WHERE id = $device_id
                 AND status = 'Available'
+                AND quantity > 0
                 LIMIT 1
             ";
 
@@ -127,6 +129,12 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST') {
 /*
  * =========================================================
  * STEP 2 (POST): ADD EACH DEVICE TO THE SELL CART
+ *
+ * The quantity requested for each device is split off the
+ * devices table row: the requested amount is decremented
+ * from the source row (which stays Available if any
+ * quantity remains), and that same amount is what gets
+ * carried into sell_cart / device_sales downstream.
  * =========================================================
  */
 
@@ -140,6 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $prices = isset($_POST['selling_price'])
         ? $_POST['selling_price']
+        : array();
+
+    $quantities = isset($_POST['quantity'])
+        ? $_POST['quantity']
         : array();
 
     if (!is_array($device_ids)) {
@@ -158,12 +170,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             ? trim($prices[$device_id])
             : '';
 
+        $requested_qty = isset($quantities[$device_id])
+            ? trim($quantities[$device_id])
+            : '';
+
 
         $query = "
             SELECT *
             FROM devices
             WHERE id = $device_id
             AND status = 'Available'
+            AND quantity > 0
             LIMIT 1
         ";
 
@@ -197,6 +214,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             continue;
         }
+
+
+        if (
+            $requested_qty === '' ||
+            !ctype_digit((string)$requested_qty) ||
+            (int)$requested_qty < 1
+        ) {
+
+            $skipped[] = array(
+                'name' => device_display_label($device),
+                'reason' => 'A valid quantity is required.'
+            );
+
+            continue;
+        }
+
+        $requested_qty = (int)$requested_qty;
 
 
         $sn_safe = mysql_real_escape_string(
@@ -236,6 +270,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
 
+        /*
+         * Atomically split the requested quantity off the
+         * devices row. The WHERE clause re-checks status and
+         * quantity at update time (not just at SELECT time
+         * above) to avoid a race with another user/tab.
+         */
+
+        $decrement_query = "
+            UPDATE devices
+            SET
+                quantity = quantity - $requested_qty,
+                updated_at = NOW()
+            WHERE id = $device_id
+            AND status = 'Available'
+            AND quantity >= $requested_qty
+        ";
+
+        $decrement_result = mysql_query(
+            $decrement_query,
+            $conn
+        );
+
+        if (
+            !$decrement_result ||
+            mysql_affected_rows($conn) == 0
+        ) {
+
+            $skipped[] = array(
+                'name' => device_display_label($device),
+                'reason' => 'Not enough available quantity.'
+            );
+
+            continue;
+        }
+
+
         $name_safe = mysql_real_escape_string(
             $device['name'],
             $conn
@@ -266,8 +336,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $conn
         );
 
-        $quantity = (int)$device['quantity'];
-
 
         $insert_query = "
             INSERT INTO sell_cart
@@ -293,7 +361,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 '$model_safe',
                 '$sn_safe',
                 '$mac_safe',
-                $quantity,
+                $requested_qty,
                 '$price_safe',
                 $user_id,
                 NOW()
@@ -306,6 +374,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         );
 
         if (!$insert_result) {
+
+            /*
+             * Roll the split back since the cart insert failed.
+             */
+
+            $rollback_query = "
+                UPDATE devices
+                SET quantity = quantity + $requested_qty
+                WHERE id = $device_id
+            ";
+
+            mysql_query($rollback_query, $conn);
 
             $skipped[] = array(
                 'name' => device_display_label($device),
@@ -320,18 +400,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             'ADD_TO_SELL_CART',
             $device_id,
             $device['sn'],
-            'Device added to sell cart',
+            'Device added to sell cart (qty: ' . $requested_qty . ')',
             '',
             json_encode(
                 array_merge(
                     $device,
-                    array('selling_price' => $price)
+                    array(
+                        'selling_price' => $price,
+                        'cart_quantity' => $requested_qty
+                    )
                 )
             )
         );
 
 
-        $added[] = device_display_label($device);
+        $added[] = device_display_label($device) . ' (x' . $requested_qty . ')';
     }
 
 
@@ -520,6 +603,19 @@ body {
 }
 
 
+.field-group {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    flex-wrap: wrap;
+}
+
+
+.qty-field,
 .price-field {
 
     display: flex;
@@ -530,6 +626,7 @@ body {
 }
 
 
+.qty-field label,
 .price-field label {
 
     font-size: 12px;
@@ -537,6 +634,29 @@ body {
     font-weight: bold;
 
     color: #ffffff;
+}
+
+
+.qty-field input {
+
+    width: 80px;
+
+    height: 42px;
+
+    border: none;
+
+    outline: none;
+
+    border-radius: 10px;
+
+    padding: 0 12px;
+
+    font-size: 14px;
+
+    background:
+        rgba(255,255,255,0.75);
+
+    color: #333;
 }
 
 
@@ -759,7 +879,7 @@ body {
             </div>
 
             <div class="subtitle">
-                Set a selling price for each device below, then add them to your sell cart.
+                Set a quantity and selling price for each device below, then add them to your sell cart.
             </div>
 
 
@@ -812,12 +932,12 @@ body {
                                         );
                                     ?>
                                     &nbsp;•&nbsp;
-                                    Qty: <?php echo (int)$device['quantity']; ?>
+                                    Available: <?php echo (int)$device['quantity']; ?>
                                 </div>
 
                             </div>
 
-                            <div class="price-field">
+                            <div class="field-group">
 
                                 <input
                                     type="hidden"
@@ -825,19 +945,41 @@ body {
                                     value="<?php echo (int)$device['id']; ?>"
                                 >
 
-                                <label for="price_<?php echo (int)$device['id']; ?>">
-                                    ₹
-                                </label>
+                                <div class="qty-field">
 
-                                <input
-                                    type="number"
-                                    id="price_<?php echo (int)$device['id']; ?>"
-                                    name="selling_price[<?php echo (int)$device['id']; ?>]"
-                                    min="0"
-                                    step="0.01"
-                                    placeholder="0.00"
-                                    required
-                                >
+                                    <label for="qty_<?php echo (int)$device['id']; ?>">
+                                        Qty
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="qty_<?php echo (int)$device['id']; ?>"
+                                        name="quantity[<?php echo (int)$device['id']; ?>]"
+                                        min="1"
+                                        max="<?php echo (int)$device['quantity']; ?>"
+                                        value="<?php echo (int)$device['quantity']; ?>"
+                                        required
+                                    >
+
+                                </div>
+
+                                <div class="price-field">
+
+                                    <label for="price_<?php echo (int)$device['id']; ?>">
+                                        ₹
+                                    </label>
+
+                                    <input
+                                        type="number"
+                                        id="price_<?php echo (int)$device['id']; ?>"
+                                        name="selling_price[<?php echo (int)$device['id']; ?>]"
+                                        min="0"
+                                        step="0.01"
+                                        placeholder="0.00"
+                                        required
+                                    >
+
+                                </div>
 
                             </div>
 

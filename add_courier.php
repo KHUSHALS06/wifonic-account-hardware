@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
      * Validation
      */
     if ($name == '') {
-        $error = 'Courier name is required.';
+        $error = 'Purchased from name is required.';
     }
 
     /*
@@ -55,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         if (!$check_result) {
             $error = mysql_error($conn);
         } elseif (mysql_num_rows($check_result) > 0) {
-            $error = 'A courier with this name already exists.';
+            $error = 'A purchased from with this name already exists.';
         }
     }
 
@@ -107,12 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'ADD_COURIER',
                 $courier_id,
                 $name,
-                'Courier company added',
+                'Purchased from added',
                 '',
                 $new_data
             );
 
-            $success = 'Courier added successfully.';
+            $success = 'Purchased from added successfully.';
 
             /*
              * Clear form.
@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Add Courier - Wifonic Hardware</title>
+<title>Add Purchased From - Wifonic Hardware</title>
 <style>
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; min-height: 100%; }
@@ -157,32 +157,32 @@ body {
     align-items: center;
     margin-bottom: 30px;
 }
-.title { font-size: 28px; font-weight: bold; color: #ffffff; }
-.subtitle { margin-top: 5px; color: rgba(255, 255, 255, 0.85); font-size: 14px; }
+.title { font-size: 28px; font-weight: bold; color: #333; }
+.subtitle { margin-top: 5px; color: rgba(0, 0, 0, 0.7); font-size: 14px; }
 .back {
     text-decoration: none;
-    color: #ffffff;
-    background: rgba(255,255,255,0.20);
-    border: 1px solid rgba(255,255,255,0.35);
+    color: #333;
+    background: rgba(255,255,255,0.50);
+    border: 1px solid rgba(0,0,0,0.20);
     padding: 10px 16px;
     border-radius: 10px;
 }
 .message { padding: 13px 15px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; }
 .error {
-    background: rgba(255, 80, 80, 0.15);
+    background: rgba(255, 80, 80, 0.25);
     border: 1px solid rgba(255, 80, 80, 0.30);
     color: #9b1c1c;
 }
 .success {
-    background: rgba(0, 180, 100, 0.15);
+    background: rgba(0, 180, 100, 0.25);
     border: 1px solid rgba(0, 180, 100, 0.30);
     color: #126b45;
 }
-.section-title { font-size: 18px; font-weight: bold; margin: 25px 0 18px; color: #ffffff; }
+.section-title { font-size: 18px; font-weight: bold; margin: 25px 0 18px; color: #333; }
 .form-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
 .form-group { display: flex; flex-direction: column; }
 .form-group.full { grid-column: 1 / -1; }
-label { font-size: 13px; font-weight: bold; margin-bottom: 7px; color: #ffffff; }
+label { font-size: 13px; font-weight: bold; margin-bottom: 7px; color: #333; }
 input, textarea {
     width: 100%;
     border: none;
@@ -190,23 +190,28 @@ input, textarea {
     border-radius: 10px;
     padding: 0 13px;
     font-size: 14px;
-    background: rgba(255,255,255,0.72);
-    color: #333;
+    background: rgba(255,255,255,0.85);
+    color: #000;
 }
 input { height: 45px; }
 textarea { padding: 10px 13px; min-height: 90px; resize: vertical; }
 input:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(116,235,213,0.30); }
-.required { color: #ffdddd; }
+.required { color: #cc0000; }
 .actions { margin-top: 30px; display: flex; justify-content: flex-end; gap: 12px; }
 .button { border: none; cursor: pointer; border-radius: 10px; padding: 12px 24px; font-size: 14px; font-weight: bold; }
-.cancel { background: rgba(255,255,255,0.30); color: #ffffff; text-decoration: none; }
+.cancel { background: rgba(255,255,255,0.50); color: #333; text-decoration: none; border: 1px solid rgba(0,0,0,0.15); }
 .submit {
     background: linear-gradient(to right, #74ebd5, #acb6e5);
-    color: #ffffff;
+    color: #333;
     box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
-.submit:hover { opacity: 0.9; }
-.note { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.80); }
+.submit:hover { opacity: 0.85; }
+.note { margin-top: 8px; font-size: 12px; color: rgba(0, 0, 0, 0.7); }
+.readonly-field {
+    background: rgba(255,255,255,0.60);
+    cursor: not-allowed;
+    color: #000;
+}
 @media (max-width: 700px) {
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: auto; }
@@ -221,8 +226,8 @@ input:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(116,235,213,0.30); }
 
 <div class="header">
     <div>
-        <div class="title">Add Courier</div>
-        <div class="subtitle">Add a courier company to the master list</div>
+        <div class="title">Add Purchased From</div>
+        <div class="subtitle">Add a purchased from vendor to the master list</div>
     </div>
     <a href="dashboard.php" class="back">Back</a>
 </div>
@@ -241,14 +246,15 @@ input:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(116,235,213,0.30); }
 
 <form method="post" action="add_courier.php">
 
-    <div class="section-title">Courier Information</div>
+    <div class="section-title">Purchased From Information</div>
 
     <div class="form-grid">
 
         <div class="form-group">
-            <label for="name">Courier Name <span class="required">*</span></label>
-            <input type="text" id="name" name="name"
-                value="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>" required>
+            <label for="name">Purchased From Name <span class="required">*</span></label>
+            <input type="text" id="name" name="name" readonly
+                class="readonly-field"
+                value="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>">
         </div>
 
         <div class="form-group">
@@ -272,7 +278,7 @@ input:focus, textarea:focus { box-shadow: 0 0 0 3px rgba(116,235,213,0.30); }
 
     <div class="actions">
         <a href="dashboard.php" class="button cancel">Cancel</a>
-        <button type="submit" class="button submit">Add Courier</button>
+        <button type="submit" class="button submit">Add Purchased From</button>
     </div>
 
 </form>

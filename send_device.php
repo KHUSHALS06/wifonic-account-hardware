@@ -78,7 +78,8 @@ function device_display_label($device)
 
 /*
  * =========================================================
- * STEP 1 (GET): SHOW A PRICE FOR EACH SELECTED DEVICE
+ * STEP 1 (GET): SHOW EACH SELECTED DEVICE WITH AN
+ * EDITABLE QUANTITY FIELD
  * =========================================================
  */
 
@@ -99,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST') {
                 FROM devices
                 WHERE id = $device_id
                 AND status = 'Available'
+                AND quantity > 0
                 LIMIT 1
             ";
 
@@ -127,6 +129,12 @@ if ($_SERVER['REQUEST_METHOD'] != 'POST') {
 /*
  * =========================================================
  * STEP 2 (POST): ADD EACH DEVICE TO THE SEND CART
+ *
+ * The quantity requested for each device is split off the
+ * devices table row: the requested amount is decremented
+ * from the source row (which stays Available if any
+ * quantity remains), and that same amount is what gets
+ * carried into send_cart / device_sends downstream.
  * =========================================================
  */
 
@@ -136,6 +144,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $device_ids = isset($_POST['device_id'])
         ? $_POST['device_id']
+        : array();
+
+    $quantities = isset($_POST['quantity'])
+        ? $_POST['quantity']
         : array();
 
     if (!is_array($device_ids)) {
@@ -150,12 +162,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $device_id = (int)$device_id;
 
+        $requested_qty = isset($quantities[$device_id])
+            ? trim($quantities[$device_id])
+            : '';
+
 
         $query = "
             SELECT *
             FROM devices
             WHERE id = $device_id
             AND status = 'Available'
+            AND quantity > 0
             LIMIT 1
         ";
 
@@ -178,6 +195,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
         $device = mysql_fetch_assoc($result);
+
+
+        if (
+            $requested_qty === '' ||
+            !ctype_digit((string)$requested_qty) ||
+            (int)$requested_qty < 1
+        ) {
+
+            $skipped[] = array(
+                'name' => device_display_label($device),
+                'reason' => 'A valid quantity is required.'
+            );
+
+            continue;
+        }
+
+        $requested_qty = (int)$requested_qty;
 
 
         $sn_safe = mysql_real_escape_string(
@@ -217,6 +251,42 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
 
 
+        /*
+         * Atomically split the requested quantity off the
+         * devices row. The WHERE clause re-checks status and
+         * quantity at update time (not just at SELECT time
+         * above) to avoid a race with another user/tab.
+         */
+
+        $decrement_query = "
+            UPDATE devices
+            SET
+                quantity = quantity - $requested_qty,
+                updated_at = NOW()
+            WHERE id = $device_id
+            AND status = 'Available'
+            AND quantity >= $requested_qty
+        ";
+
+        $decrement_result = mysql_query(
+            $decrement_query,
+            $conn
+        );
+
+        if (
+            !$decrement_result ||
+            mysql_affected_rows($conn) == 0
+        ) {
+
+            $skipped[] = array(
+                'name' => device_display_label($device),
+                'reason' => 'Not enough available quantity.'
+            );
+
+            continue;
+        }
+
+
         $name_safe = mysql_real_escape_string(
             $device['name'],
             $conn
@@ -242,8 +312,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $conn
         );
 
-        $quantity = (int)$device['quantity'];
-
 
         $insert_query = "
             INSERT INTO send_cart
@@ -268,7 +336,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 '$model_safe',
                 '$sn_safe',
                 '$mac_safe',
-                $quantity,
+                $requested_qty,
                 $user_id,
                 NOW()
             )
@@ -280,6 +348,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         );
 
         if (!$insert_result) {
+
+            /*
+             * Roll the split back since the cart insert failed.
+             */
+
+            $rollback_query = "
+                UPDATE devices
+                SET quantity = quantity + $requested_qty
+                WHERE id = $device_id
+            ";
+
+            mysql_query($rollback_query, $conn);
 
             $skipped[] = array(
                 'name' => device_display_label($device),
@@ -294,13 +374,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             'ADD_TO_SEND_CART',
             $device_id,
             $device['sn'],
-            'Device added to send cart',
+            'Device added to send cart (qty: ' . $requested_qty . ')',
             '',
-            json_encode($device)
+            json_encode(
+                array_merge(
+                    $device,
+                    array('cart_quantity' => $requested_qty)
+                )
+            )
         );
 
 
-        $added[] = device_display_label($device);
+        $added[] = device_display_label($device) . ' (x' . $requested_qty . ')';
     }
 
 
@@ -486,6 +571,49 @@ body {
     font-family:
         "Courier New",
         monospace;
+}
+
+
+.qty-field {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 8px;
+}
+
+
+.qty-field label {
+
+    font-size: 12px;
+
+    font-weight: bold;
+
+    color: #ffffff;
+}
+
+
+.qty-field input {
+
+    width: 90px;
+
+    height: 42px;
+
+    border: none;
+
+    outline: none;
+
+    border-radius: 10px;
+
+    padding: 0 12px;
+
+    font-size: 14px;
+
+    background:
+        rgba(255,255,255,0.75);
+
+    color: #333;
 }
 
 
@@ -685,7 +813,7 @@ body {
             </div>
 
             <div class="subtitle">
-                Select devices below, then add them to your send cart.
+                Select a quantity for each device below, then add them to your send cart.
             </div>
 
 
@@ -738,16 +866,34 @@ body {
                                         );
                                     ?>
                                     &nbsp;•&nbsp;
-                                    Qty: <?php echo (int)$device['quantity']; ?>
+                                    Available: <?php echo (int)$device['quantity']; ?>
                                 </div>
 
                             </div>
 
-                            <input
-                                type="hidden"
-                                name="device_id[]"
-                                value="<?php echo (int)$device['id']; ?>"
-                            >
+                            <div class="qty-field">
+
+                                <input
+                                    type="hidden"
+                                    name="device_id[]"
+                                    value="<?php echo (int)$device['id']; ?>"
+                                >
+
+                                <label for="qty_<?php echo (int)$device['id']; ?>">
+                                    Qty
+                                </label>
+
+                                <input
+                                    type="number"
+                                    id="qty_<?php echo (int)$device['id']; ?>"
+                                    name="quantity[<?php echo (int)$device['id']; ?>]"
+                                    min="1"
+                                    max="<?php echo (int)$device['quantity']; ?>"
+                                    value="<?php echo (int)$device['quantity']; ?>"
+                                    required
+                                >
+
+                            </div>
 
                         </div>
 
