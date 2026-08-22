@@ -15,9 +15,6 @@ $error = '';
 $success = '';
 
 $name = '';
-$sn = '';
-$mac = '';
-$quantity = '1';
 $source = '';
 $purchase_date = '';
 $purchased_from = '';
@@ -26,6 +23,11 @@ $brand_id = 0;
 $model_id = 0;
 $brand = '';
 $model = '';
+
+// Device entries (SN + MAC pairs)
+$device_entries = array(
+    array('sn' => '', 'mac' => '')
+);
 
 $brands = array();
 $brands_query = "
@@ -66,24 +68,11 @@ if ($couriers_result) {
     }
 }
 
-
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     $name = isset($_POST['name'])
         ? trim($_POST['name'])
         : '';
-
-    $sn = isset($_POST['sn'])
-        ? trim($_POST['sn'])
-        : '';
-
-    $mac = isset($_POST['mac'])
-        ? trim($_POST['mac'])
-        : '';
-
-    $quantity = isset($_POST['quantity'])
-        ? (int)$_POST['quantity']
-        : 0;
 
     $source = isset($_POST['source'])
         ? trim($_POST['source'])
@@ -117,6 +106,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         ? trim($_POST['model'])
         : '';
 
+    // Get device entries from POST
+    $device_entries = array();
+    if (isset($_POST['sn']) && is_array($_POST['sn'])) {
+        foreach ($_POST['sn'] as $index => $sn_value) {
+            $sn_value = trim($sn_value);
+            $mac_value = isset($_POST['mac'][$index]) ? trim($_POST['mac'][$index]) : '';
+            
+            // Only include entries with a serial number
+            if ($sn_value !== '') {
+                $device_entries[] = array(
+                    'sn' => $sn_value,
+                    'mac' => $mac_value
+                );
+            }
+        }
+    }
+
     $allowed_sources = array(
         'Purchased',
         'Office',
@@ -125,191 +131,145 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         'Repaired'
     );
 
+    // Validation
     if ($name == '') {
-
         $error = 'Device name is required.';
-
-    } elseif ($sn == '') {
-
-        $error = 'Serial number is required.';
-
-    } elseif ($quantity <= 0) {
-
-        $error = 'Quantity must be greater than 0.';
-
+    } elseif (count($device_entries) === 0) {
+        $error = 'At least one device (with serial number) is required.';
     } elseif (!in_array($source, $allowed_sources)) {
-
         $error = 'Invalid device source.';
+    }
 
+    // Check for duplicate serial numbers within the form
+    if ($error == '') {
+        $sn_list = array();
+        foreach ($device_entries as $entry) {
+            $sn_list[] = $entry['sn'];
+        }
+        if (count($sn_list) !== count(array_unique($sn_list))) {
+            $error = 'Duplicate serial numbers found in the form.';
+        }
     }
 
     if ($error == '') {
-
         if ($purchase_price !== '') {
-
             if (!is_numeric($purchase_price)) {
-
                 $error = 'Purchase price must be a valid number.';
-
             } elseif ((float)$purchase_price < 0) {
-
                 $error = 'Purchase price cannot be negative.';
             }
         }
     }
 
+    // Check for existing serial numbers in database
     if ($error == '') {
-
-        $sn_safe = mysql_real_escape_string(
-            $sn,
-            $conn
-        );
-
-        $check_query = "
-            SELECT id
-            FROM devices
-            WHERE sn = '$sn_safe'
-            LIMIT 1
-        ";
-
-        $check_result = mysql_query(
-            $check_query,
-            $conn
-        );
-
-        if (!$check_result) {
-
-            $error = mysql_error($conn);
-
-        } elseif (mysql_num_rows($check_result) > 0) {
-
-            $error = 'A device with this SN already exists.';
+        $sn_list = array();
+        foreach ($device_entries as $entry) {
+            $sn_list[] = "'" . mysql_real_escape_string($entry['sn'], $conn) . "'";
+        }
+        
+        if (!empty($sn_list)) {
+            $check_query = "
+                SELECT sn
+                FROM devices
+                WHERE sn IN (" . implode(',', $sn_list) . ")
+            ";
+            $check_result = mysql_query($check_query, $conn);
+            
+            if (!$check_result) {
+                $error = mysql_error($conn);
+            } elseif (mysql_num_rows($check_result) > 0) {
+                $existing_sns = array();
+                while ($row = mysql_fetch_assoc($check_result)) {
+                    $existing_sns[] = $row['sn'];
+                }
+                $error = 'The following serial numbers already exist: ' . implode(', ', $existing_sns);
+            }
         }
     }
 
     if ($error == '') {
-
-        $name_safe = mysql_real_escape_string(
-            $name,
-            $conn
-        );
-
-        $mac_safe = mysql_real_escape_string(
-            $mac,
-            $conn
-        );
-
-        $source_safe = mysql_real_escape_string(
-            $source,
-            $conn
-        );
-
-        $purchased_from_safe = mysql_real_escape_string(
-            $purchased_from,
-            $conn
-        );
-
-        $brand_safe = mysql_real_escape_string(
-            $brand,
-            $conn
-        );
-
-        $model_safe = mysql_real_escape_string(
-            $model,
-            $conn
-        );
+        $name_safe = mysql_real_escape_string($name, $conn);
+        $source_safe = mysql_real_escape_string($source, $conn);
+        $purchased_from_safe = mysql_real_escape_string($purchased_from, $conn);
+        $brand_safe = mysql_real_escape_string($brand, $conn);
+        $model_safe = mysql_real_escape_string($model, $conn);
 
         if ($purchase_date == '') {
-
             $purchase_date_sql = 'NULL';
-
         } else {
-
-            $purchase_date_safe =
-                mysql_real_escape_string(
-                    $purchase_date,
-                    $conn
-                );
-
-            $purchase_date_sql =
-                "'$purchase_date_safe'";
+            $purchase_date_safe = mysql_real_escape_string($purchase_date, $conn);
+            $purchase_date_sql = "'$purchase_date_safe'";
         }
 
         if ($purchase_price == '') {
-
             $purchase_price_sql = 'NULL';
-
         } else {
-
-            $purchase_price_sql =
-                "'" .
-                mysql_real_escape_string(
-                    $purchase_price,
-                    $conn
-                ) .
-                "'";
+            $purchase_price_sql = "'" . mysql_real_escape_string($purchase_price, $conn) . "'";
         }
 
-        $user_id =
-            (int)$_SESSION['user_id'];
+        $user_id = (int)$_SESSION['user_id'];
+        
+        $inserted_count = 0;
+        $device_ids = array();
 
-        $query = "
-            INSERT INTO devices (
-                name,
-                sn,
-                mac,
-                quantity,
-                source,
-                brand_id,
-                model_id,
-                brand,
-                model,
-                purchase_date,
-                purchased_from,
-                purchase_price,
-                status,
-                created_by,
-                created_at
-            )
-            VALUES (
-                '$name_safe',
-                '$sn_safe',
-                '$mac_safe',
-                $quantity,
-                '$source_safe',
-                " . ($brand_id > 0 ? $brand_id : 'NULL') . ",
-                " . ($model_id > 0 ? $model_id : 'NULL') . ",
-                '$brand_safe',
-                '$model_safe',
-                $purchase_date_sql,
-                '$purchased_from_safe',
-                $purchase_price_sql,
-                'Available',
-                $user_id,
-                NOW()
-            )
-        ";
+        // Insert each device
+        foreach ($device_entries as $entry) {
+            $sn_safe = mysql_real_escape_string($entry['sn'], $conn);
+            $mac_safe = mysql_real_escape_string($entry['mac'], $conn);
 
-        $result = mysql_query(
-            $query,
-            $conn
-        );
+            $query = "
+                INSERT INTO devices (
+                    name,
+                    sn,
+                    mac,
+                    quantity,
+                    source,
+                    brand_id,
+                    model_id,
+                    brand,
+                    model,
+                    purchase_date,
+                    purchased_from,
+                    purchase_price,
+                    status,
+                    created_by,
+                    created_at
+                )
+                VALUES (
+                    '$name_safe',
+                    '$sn_safe',
+                    '$mac_safe',
+                    1,
+                    '$source_safe',
+                    " . ($brand_id > 0 ? $brand_id : 'NULL') . ",
+                    " . ($model_id > 0 ? $model_id : 'NULL') . ",
+                    '$brand_safe',
+                    '$model_safe',
+                    $purchase_date_sql,
+                    '$purchased_from_safe',
+                    $purchase_price_sql,
+                    'Available',
+                    $user_id,
+                    NOW()
+                )
+            ";
 
-        if (!$result) {
+            $result = mysql_query($query, $conn);
 
-            $error = mysql_error($conn);
-
-        } else {
-
-            $device_id =
-                mysql_insert_id($conn);
-
-            $new_data = json_encode(
-                array(
+            if (!$result) {
+                $error = mysql_error($conn);
+                break;
+            } else {
+                $device_id = mysql_insert_id($conn);
+                $device_ids[] = $device_id;
+                $inserted_count++;
+                
+                $new_data = json_encode(array(
                     'name' => $name,
-                    'sn' => $sn,
-                    'mac' => $mac,
-                    'quantity' => $quantity,
+                    'sn' => $entry['sn'],
+                    'mac' => $entry['mac'],
+                    'quantity' => 1,
                     'source' => $source,
                     'brand_id' => $brand_id,
                     'model_id' => $model_id,
@@ -319,25 +279,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     'purchased_from' => $purchased_from,
                     'purchase_price' => $purchase_price,
                     'status' => 'Available'
-                )
-            );
+                ));
 
-            audit_log_action(
-                'ADD_DEVICE',
-                $device_id,
-                $sn,
-                'Device added to inventory',
-                '',
-                $new_data
-            );
+                audit_log_action(
+                    'ADD_DEVICE',
+                    $device_id,
+                    $entry['sn'],
+                    'Device added to inventory',
+                    '',
+                    $new_data
+                );
+            }
+        }
 
-            $success =
-                'Device added successfully to inventory.';
-
+        if ($error == '') {
+            $success = $inserted_count . ' device(s) added successfully to inventory.';
+            
+            // Reset form
             $name = '';
-            $sn = '';
-            $mac = '';
-            $quantity = '1';
             $source = '';
             $purchase_date = '';
             $purchased_from = '';
@@ -346,6 +305,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $model_id = 0;
             $brand = '';
             $model = '';
+            $device_entries = array(array('sn' => '', 'mac' => ''));
         }
     }
 }
@@ -357,10 +317,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 <head>
 
 <meta charset="UTF-8">
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Add Device - Wifonic Hardware</title>
 
 <style>
@@ -369,376 +326,140 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
     margin: 0;
     padding: 0;
     min-height: 100%;
 }
 
 body {
-
-    font-family:
-        Arial,
-        Helvetica,
-        sans-serif;
-
+    font-family: Arial, Helvetica, sans-serif;
     color: #000000;
-
     min-height: 100vh;
-
-    background:
-        linear-gradient(
-            135deg,
-            #74ebd5 0%,
-            #acb6e5 100%
-        );
-
+    background: linear-gradient(135deg, #74ebd5 0%, #acb6e5 100%);
     background-attachment: fixed;
-
-    animation:
-        fadeIn 0.5s ease;
-
+    animation: fadeIn 0.5s ease;
 }
-
 
 @keyframes fadeIn {
-
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
-
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
-
 
 @keyframes slideDown {
-
-    from {
-        opacity: 0;
-        transform: translateY(-12px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
+    from { opacity: 0; transform: translateY(-12px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
 
 @keyframes riseIn {
-
-    from {
-        opacity: 0;
-        transform: translateY(14px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-
 body:before {
-
     content: "";
-
     position: fixed;
-
     width: 350px;
     height: 350px;
-
     border-radius: 50%;
-
     top: -150px;
     left: -100px;
-
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.18
-        );
-
+    background: rgba(255, 255, 255, 0.18);
     pointer-events: none;
-
 }
 
 body:after {
-
     content: "";
-
     position: fixed;
-
     width: 400px;
     height: 400px;
-
     border-radius: 50%;
-
     right: -150px;
     bottom: -180px;
-
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.16
-        );
-
+    background: rgba(255, 255, 255, 0.16);
     pointer-events: none;
-
 }
-
 
 .header {
-
     position: relative;
-
     z-index: 10;
-
-    margin:
-        18px 25px 0;
-
-    min-height:
-        70px;
-
-    padding:
-        0 22px;
-
-    border-radius:
-        18px;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        space-between;
-
-    gap:
-        20px;
-
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.42
-        );
-
-    border:
-        1px solid
-        rgba(
-            255,
-            255,
-            255,
-            0.60
-        );
-
-    box-shadow:
-        0 8px 30px
-        rgba(
-            31,
-            38,
-            135,
-            0.12
-        );
-
-    backdrop-filter:
-        blur(18px);
-
-    -webkit-backdrop-filter:
-        blur(18px);
-
-    animation:
-        slideDown 0.5s ease;
-
+    margin: 18px 25px 0;
+    min-height: 70px;
+    padding: 0 22px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.60);
+    box-shadow: 0 8px 30px rgba(31, 38, 135, 0.12);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    animation: slideDown 0.5s ease;
 }
-
 
 .logo {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        10px;
-
-    flex-shrink:
-        0;
-
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
-
 
 .logo-icon {
-
-    width:
-        42px;
-
-    height:
-        42px;
-
-    border-radius:
-        12px;
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    justify-content:
-        center;
-
-    color:
-        #000000;
-
-    font-size:
-        18px;
-
-    font-weight:
-        bold;
-
-    background:
-        linear-gradient(
-            135deg,
-            #74ebd5,
-            #acb6e5
-        );
-
-    transition:
-        transform 0.25s ease;
-
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #000000;
+    font-size: 18px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #74ebd5, #acb6e5);
+    transition: transform 0.25s ease;
 }
-
 
 .logo-icon:hover {
-
-    transform:
-        rotate(-8deg)
-        scale(1.05);
-
+    transform: rotate(-8deg) scale(1.05);
 }
-
 
 .logo-text {
-
-    font-size:
-        18px;
-
-    font-weight:
-        bold;
-
-    white-space:
-        nowrap;
-
-    color:
-        #000000;
-
+    font-size: 18px;
+    font-weight: bold;
+    white-space: nowrap;
+    color: #000000;
 }
-
 
 .navigation {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        5px;
-
+    display: flex;
+    align-items: center;
+    gap: 5px;
     flex: 1;
-
-    justify-content:
-        center;
-
+    justify-content: center;
 }
-
 
 .nav-link {
-
-    padding:
-        10px 13px;
-
-    border-radius:
-        10px;
-
-    text-decoration:
-        none;
-
-    color:
-        #000000;
-
-    font-size:
-        12px;
-
-    font-weight:
-        bold;
-
-    transition:
-        0.2s;
-
-    white-space:
-        nowrap;
-
+    padding: 10px 13px;
+    border-radius: 10px;
+    text-decoration: none;
+    color: #000000;
+    font-size: 12px;
+    font-weight: bold;
+    transition: 0.2s;
+    white-space: nowrap;
 }
-
 
 .nav-link:hover {
-
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.45
-        );
-
-    transform:
-        translateY(-1px);
-
+    background: rgba(255, 255, 255, 0.45);
+    transform: translateY(-1px);
 }
-
 
 .nav-link.active {
-
-    color:
-        #000000;
-
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.62
-        );
-
-    box-shadow:
-        0 4px 12px
-        rgba(
-            0,
-            0,
-            0,
-            0.05
-        );
-
+    color: #000000;
+    background: rgba(255, 255, 255, 0.62);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
 }
-
 
 .dropdown {
     position: relative;
@@ -777,511 +498,340 @@ body:after {
     cursor: pointer;
 }
 
-
 .header-right {
-
-    display:
-        flex;
-
-    align-items:
-        center;
-
-    gap:
-        10px;
-
-    flex-shrink:
-        0;
-
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
 }
-
 
 .user-box {
-
-    padding:
-        8px 12px;
-
-    border-radius:
-        10px;
-
-    background:
-        rgba(
-            255,
-            255,
-            255,
-            0.30
-        );
-
-    font-size:
-        12px;
-
-    color:
-        #000000;
-
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.30);
+    font-size: 12px;
+    color: #000000;
 }
-
 
 .username {
-
-    font-weight:
-        bold;
-
-    color:
-        #000000;
-
+    font-weight: bold;
+    color: #000000;
 }
-
 
 .role {
-
-    margin-left:
-        5px;
-
-    color:
-        #000000;
-
+    margin-left: 5px;
+    color: #000000;
 }
-
 
 .logout {
-
-    padding:
-        10px 14px;
-
-    border-radius:
-        9px;
-
-    color:
-        #000000;
-
-    text-decoration:
-        none;
-
-    font-size:
-        12px;
-
-    font-weight:
-        bold;
-
-    background:
-        rgba(
-            198,
-            40,
-            40,
-            0.55
-        );
-
-    transition:
-        0.2s ease;
-
+    padding: 10px 14px;
+    border-radius: 9px;
+    color: #000000;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bold;
+    background: rgba(198, 40, 40, 0.55);
+    transition: 0.2s ease;
 }
-
 
 .logout:hover {
-
-    background:
-        rgba(
-            198,
-            40,
-            40,
-            0.75
-        );
-
-    transform:
-        translateY(-1px);
-
+    background: rgba(198, 40, 40, 0.75);
+    transform: translateY(-1px);
 }
 
-
 .page {
-
     position: relative;
-
     z-index: 2;
-
     max-width: 900px;
-
     margin: 0 auto;
-
     padding: 35px 20px 60px;
 }
 
-
 .glass-card {
-
-    background:
-        rgba(255, 255, 255, 0.42);
-
-    border:
-        1px solid
-        rgba(255, 255, 255, 0.60);
-
-    box-shadow:
-        0 20px 50px
-        rgba(0, 0, 0, 0.15);
-
-    backdrop-filter:
-        blur(18px);
-
-    -webkit-backdrop-filter:
-        blur(18px);
-
+    background: rgba(255, 255, 255, 0.42);
+    border: 1px solid rgba(255, 255, 255, 0.60);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
     border-radius: 20px;
-
     padding: 35px;
-
-    animation:
-        riseIn 0.5s ease;
+    animation: riseIn 0.5s ease;
 }
 
-
 .page-header {
-
     display: flex;
-
     justify-content: space-between;
-
     align-items: center;
-
     margin-bottom: 30px;
 }
 
-
 .title {
-
     font-size: 28px;
-
     font-weight: bold;
-
     color: #000000;
 }
-
 
 .subtitle {
-
     margin-top: 5px;
-
     color: #000000;
-
     font-size: 14px;
 }
-
 
 .back {
-
     text-decoration: none;
-
     color: #000000;
-
-    background:
-        rgba(255,255,255,0.40);
-
-    border:
-        1px solid
-        rgba(255,255,255,0.55);
-
-    padding:
-        10px 16px;
-
+    background: rgba(255,255,255,0.40);
+    border: 1px solid rgba(255,255,255,0.55);
+    padding: 10px 16px;
     border-radius: 10px;
-
-    transition:
-        0.2s ease;
+    transition: 0.2s ease;
 }
-
 
 .back:hover {
-
-    transform:
-        translateY(-1px);
-
+    transform: translateY(-1px);
 }
-
 
 .message {
-
     padding: 13px 15px;
-
     border-radius: 10px;
-
     margin-bottom: 20px;
-
     font-size: 14px;
-
     color: #000000;
-
-    animation:
-        riseIn 0.35s ease;
+    animation: riseIn 0.35s ease;
 }
-
 
 .error {
-
-    background:
-        rgba(255, 80, 80, 0.20);
-
-    border:
-        1px solid
-        rgba(255, 80, 80, 0.35);
+    background: rgba(255, 80, 80, 0.20);
+    border: 1px solid rgba(255, 80, 80, 0.35);
 }
-
 
 .success {
-
-    background:
-        rgba(0, 180, 100, 0.20);
-
-    border:
-        1px solid
-        rgba(0, 180, 100, 0.35);
+    background: rgba(0, 180, 100, 0.20);
+    border: 1px solid rgba(0, 180, 100, 0.35);
 }
 
-
 .section-title {
-
     font-size: 18px;
-
     font-weight: bold;
-
-    margin:
-        25px 0 18px;
-
+    margin: 25px 0 18px;
     color: #000000;
 }
 
-
 .form-grid {
-
     display: grid;
-
-    grid-template-columns:
-        repeat(2, 1fr);
-
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
 }
 
-
 .form-group {
-
     display: flex;
-
     flex-direction: column;
 }
 
-
 .form-group.full {
-
-    grid-column:
-        1 / -1;
+    grid-column: 1 / -1;
 }
-
 
 label {
-
     font-size: 13px;
-
     font-weight: bold;
-
     margin-bottom: 7px;
-
     color: #000000;
 }
 
-
-input,
-select {
-
+input, select {
     width: 100%;
-
     height: 45px;
-
     border: none;
-
     outline: none;
-
     border-radius: 10px;
-
-    padding:
-        0 13px;
-
+    padding: 0 13px;
     font-size: 14px;
-
-    background:
-        rgba(255,255,255,0.72);
-
+    background: rgba(255,255,255,0.72);
     color: #000000;
-
-    transition:
-        0.2s ease;
+    transition: 0.2s ease;
 }
 
-
-input:focus,
-select:focus {
-
-    box-shadow:
-        0 0 0 3px
-        rgba(116,235,213,0.35);
+input:focus, select:focus {
+    box-shadow: 0 0 0 3px rgba(116,235,213,0.35);
 }
-
 
 .required {
-
     color: #000000;
 }
 
-
 .actions {
-
     margin-top: 30px;
-
     display: flex;
-
     justify-content: flex-end;
-
     gap: 12px;
 }
 
-
 .button {
-
     border: none;
-
     cursor: pointer;
-
     border-radius: 10px;
-
-    padding:
-        12px 24px;
-
+    padding: 12px 24px;
     font-size: 14px;
-
     font-weight: bold;
-
     color: #000000;
-
-    transition:
-        0.2s ease;
+    transition: 0.2s ease;
 }
-
 
 .button:hover {
-
-    transform:
-        translateY(-1px);
-
+    transform: translateY(-1px);
 }
 
-
 .cancel {
-
-    background:
-        rgba(255,255,255,0.45);
-
+    background: rgba(255,255,255,0.45);
     text-decoration: none;
 }
 
-
 .submit {
-
-    background:
-        linear-gradient(
-            to right,
-            #74ebd5,
-            #acb6e5
-        );
-
-    box-shadow:
-        0 8px 20px
-        rgba(0,0,0,0.12);
+    background: linear-gradient(to right, #74ebd5, #acb6e5);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.12);
 }
 
-
 .note {
-
     margin-top: 8px;
-
     font-size: 12px;
-
     color: #000000;
 }
 
+/* Device entries table styling */
+.device-entries-section {
+    margin-top: 10px;
+}
+
+.device-entries-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.device-entries-header h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: bold;
+    color: #000000;
+}
+
+.btn-add-entry {
+    background: rgba(116, 235, 213, 0.4);
+    border: none;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #000000;
+    transition: 0.2s ease;
+}
+
+.btn-add-entry:hover {
+    background: rgba(116, 235, 213, 0.7);
+    transform: translateY(-1px);
+}
+
+.device-entry-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    align-items: end;
+}
+
+.device-entry-row .form-group {
+    margin: 0;
+}
+
+.device-entry-row .form-group label {
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.device-entry-row .form-group input {
+    height: 38px;
+    font-size: 13px;
+}
+
+.btn-remove-entry {
+    background: rgba(198, 40, 40, 0.25);
+    border: none;
+    cursor: pointer;
+    border-radius: 10px;
+    padding: 0 14px;
+    height: 38px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #000000;
+    transition: 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    align-self: end;
+    min-width: 40px;
+}
+
+.btn-remove-entry:hover {
+    background: rgba(198, 40, 40, 0.5);
+    transform: translateY(-1px);
+}
+
+.btn-remove-entry:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
 
 @media (max-width: 700px) {
-
     .form-grid {
-
         grid-template-columns: 1fr;
     }
-
     .form-group.full {
-
         grid-column: auto;
     }
-
     .page-header {
-
         align-items: flex-start;
-
         gap: 15px;
-
         flex-direction: column;
     }
-
     .glass-card {
-
         padding: 25px;
+    }
+    .device-entry-row {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .btn-remove-entry {
+        grid-column: span 2;
+        width: 100%;
+        height: 38px;
     }
 }
 
 @media (max-width: 1100px) {
-
     .header {
-
-        flex-wrap:
-            wrap;
-
-        padding:
-            12px 18px;
-
+        flex-wrap: wrap;
+        padding: 12px 18px;
     }
-
     .navigation {
-
-        order:
-            3;
-
-        width:
-            100%;
-
-        overflow-x:
-            auto;
-
-        justify-content:
-            flex-start;
-
-        padding-bottom:
-            3px;
-
+        order: 3;
+        width: 100%;
+        overflow-x: auto;
+        justify-content: flex-start;
+        padding-bottom: 3px;
     }
-
 }
 
 @media (max-width: 700px) {
-
     .header {
-
-        margin:
-            10px;
-
+        margin: 10px;
     }
-
     .user-box {
-
-        display:
-            none;
-
+        display: none;
     }
-
 }
 
 .combo {
@@ -1349,7 +899,6 @@ select:focus {
     color: #000000;
 }
 
-
 </style>
 
 </head>
@@ -1359,60 +908,20 @@ select:focus {
 <div class="header">
 
     <div class="logo">
-
-        <div class="logo-icon">
-            W
-        </div>
-
-        <div class="logo-text">
-            Wifonic Hardware
-        </div>
-
+        <div class="logo-icon">W</div>
+        <div class="logo-text">Wifonic Hardware</div>
     </div>
 
     <nav class="navigation">
-
-        <a
-            href="dashboard.php"
-            class="nav-link"
-        >
-            Dashboard
-        </a>
-
-        <a
-            href="inventory.php"
-            class="nav-link"
-        >
-            Inventory
-        </a>
-
-        <a
-            href="add_device.php"
-            class="nav-link active"
-        >
-            Add Device
-        </a>
-
-        <a
-            href="sell.php"
-            class="nav-link"
-        >
-            Sell
-        </a>
-
-        <a
-            href="send.php"
-            class="nav-link"
-        >
-            Send
-        </a>
+        <a href="dashboard.php" class="nav-link">Dashboard</a>
+        <a href="inventory.php" class="nav-link">Inventory</a>
+        <a href="add_device.php" class="nav-link active">Add Device</a>
+        <a href="sell.php" class="nav-link">Sell</a>
+        <a href="send.php" class="nav-link">Send</a>
 
         <?php if ($role === 'admin' || $role === 'manager') { ?>
-
             <div class="dropdown">
-                <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">
-                    Management
-                </a>
+                <a href="#" class="nav-link dropdown-toggle" onclick="toggleDropdown(event)">Management</a>
                 <div class="dropdown-content" id="managementDropdown">
                     <a href="add_brand.php">Add Brand</a>
                     <a href="add_model.php">Add Model</a>
@@ -1420,70 +929,24 @@ select:focus {
                     <a href="add_courier.php">Add Courier</a>
                 </div>
             </div>
-
         <?php } ?>
 
         <?php if ($role === 'admin') { ?>
-
-            <a
-                href="users.php"
-                class="nav-link"
-            >
-                Users
-            </a>
-
-            <a
-                href="audit_log.php"
-                class="nav-link"
-            >
-                Audit Logs
-            </a>
-
+            <a href="users.php" class="nav-link">Users</a>
+            <a href="audit_log.php" class="nav-link">Audit Logs</a>
         <?php } ?>
-
     </nav>
 
     <div class="header-right">
-
         <div class="user-box">
-
             <span class="username">
-
-                <?php
-
-                echo htmlspecialchars(
-                    $username,
-                    ENT_QUOTES,
-                    'UTF-8'
-                );
-
-                ?>
-
+                <?php echo htmlspecialchars($username, ENT_QUOTES, 'UTF-8'); ?>
             </span>
-
             <span class="role">
-
-                <?php
-
-                echo htmlspecialchars(
-                    $role,
-                    ENT_QUOTES,
-                    'UTF-8'
-                );
-
-                ?>
-
+                <?php echo htmlspecialchars($role, ENT_QUOTES, 'UTF-8'); ?>
             </span>
-
         </div>
-
-        <a
-            href="logout.php"
-            class="logout"
-        >
-            Logout
-        </a>
-
+        <a href="logout.php" class="logout">Logout</a>
     </div>
 
 </div>
@@ -1493,386 +956,131 @@ select:focus {
     <div class="glass-card">
 
         <div class="page-header">
-
             <div>
-
-                <div class="title">
-                    Add Device
-                </div>
-
-                <div class="subtitle">
-                    Add a new device to the hardware inventory
-                </div>
-
+                <div class="title">Add Device</div>
+                <div class="subtitle">Add one or more devices to the hardware inventory</div>
             </div>
-
-            <a
-                href="dashboard.php"
-                class="back"
-            >
-                Back
-            </a>
-
+            <a href="dashboard.php" class="back">Back</a>
         </div>
 
-
         <?php if ($error != '') { ?>
-
             <div class="message error">
-                <?php
-                echo htmlspecialchars(
-                    $error,
-                    ENT_QUOTES,
-                    'UTF-8'
-                );
-                ?>
+                <?php echo htmlspecialchars($error, ENT_QUOTES, 'UTF-8'); ?>
             </div>
-
         <?php } ?>
-
 
         <?php if ($success != '') { ?>
-
             <div class="message success">
-                <?php
-                echo htmlspecialchars(
-                    $success,
-                    ENT_QUOTES,
-                    'UTF-8'
-                );
-                ?>
+                <?php echo htmlspecialchars($success, ENT_QUOTES, 'UTF-8'); ?>
             </div>
-
         <?php } ?>
 
+        <form method="post" action="add_device.php">
 
-        <form
-            method="post"
-            action="add_device.php"
-        >
-
-
-            <div class="section-title">
-                Device Information
-            </div>
-
+            <div class="section-title">Device Information</div>
 
             <div class="form-grid">
 
-
                 <div class="form-group">
-
-                    <label for="brand_search">
-                        Brand
-                    </label>
-
+                    <label for="brand_search">Brand</label>
                     <div class="combo" data-combo="brand">
-                        <input
-                            type="text"
-                            id="brand_search"
-                            class="combo-input"
-                            placeholder="Search brand..."
-                            autocomplete="off"
-                        >
+                        <input type="text" id="brand_search" class="combo-input" placeholder="Search brand..." autocomplete="off">
                         <div class="combo-list"></div>
                     </div>
-
                     <input type="hidden" id="brand_id" name="brand_id" value="<?php echo (int)$brand_id; ?>">
                     <input type="hidden" id="brand" name="brand" value="<?php echo htmlspecialchars($brand, ENT_QUOTES, 'UTF-8'); ?>">
-
                 </div>
 
-
                 <div class="form-group">
-
-                    <label for="model_search">
-                        Model
-                    </label>
-
+                    <label for="model_search">Model</label>
                     <div class="combo" data-combo="model">
-                        <input
-                            type="text"
-                            id="model_search"
-                            class="combo-input"
-                            placeholder="Select a brand first"
-                            autocomplete="off"
-                            disabled
-                        >
+                        <input type="text" id="model_search" class="combo-input" placeholder="Select a brand first" autocomplete="off" disabled>
                         <div class="combo-list"></div>
                     </div>
-
                     <input type="hidden" id="model_id" name="model_id" value="<?php echo (int)$model_id; ?>">
                     <input type="hidden" id="model" name="model" value="<?php echo htmlspecialchars($model, ENT_QUOTES, 'UTF-8'); ?>">
-
                 </div>
-
 
                 <div class="form-group full">
-
-                    <label for="name">
-                        Device Name
-                        <span class="required">*</span>
-                    </label>
-
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $name,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                        required
-                    >
-
-                    <div class="note">
-                        Auto-filled from Brand + Model, edit as needed
-                    </div>
-
+                    <label for="name">Device Name <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" value="<?php echo htmlspecialchars($name, ENT_QUOTES, 'UTF-8'); ?>" required>
+                    <div class="note">Auto-filled from Brand + Model, edit as needed</div>
                 </div>
-
-
-                <div class="form-group">
-
-                    <label for="sn">
-                        Serial Number (SN)
-                        <span class="required">*</span>
-                    </label>
-
-                    <input
-                        type="text"
-                        id="sn"
-                        name="sn"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $sn,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                        required
-                    >
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label for="mac">
-                        MAC Address
-                    </label>
-
-                    <input
-                        type="text"
-                        id="mac"
-                        name="mac"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $mac,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                    >
-
-                </div>
-
-
-                <div class="form-group">
-
-                    <label for="quantity">
-                        Quantity
-                        <span class="required">*</span>
-                    </label>
-
-                    <input
-                        type="number"
-                        id="quantity"
-                        name="quantity"
-                        min="1"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $quantity,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                        required
-                    >
-
-                </div>
-
 
                 <div class="form-group full">
-
-                    <label for="source">
-                        Source
-                        <span class="required">*</span>
-                    </label>
-
-                    <select
-                        id="source"
-                        name="source"
-                        required
-                    >
-
-                        <option value="">
-                            Select Source
-                        </option>
-
+                    <label for="source">Source <span class="required">*</span></label>
+                    <select id="source" name="source" required>
+                        <option value="">Select Source</option>
                         <?php
-
-                        $sources = array(
-                            'Purchased',
-                            'Office',
-                            'Replaced',
-                            'Terminated Client',
-                            'Repaired'
-                        );
-
+                        $sources = array('Purchased', 'Office', 'Replaced', 'Terminated Client', 'Repaired');
                         foreach ($sources as $item) {
-
-                            $selected =
-                                ($source == $item)
-                                    ? 'selected'
-                                    : '';
-
-                            echo '<option value="' .
-                                htmlspecialchars(
-                                    $item,
-                                    ENT_QUOTES,
-                                    'UTF-8'
-                                ) .
-                                '" ' .
-                                $selected .
-                                '>' .
-                                htmlspecialchars(
-                                    $item,
-                                    ENT_QUOTES,
-                                    'UTF-8'
-                                ) .
-                                '</option>';
+                            $selected = ($source == $item) ? 'selected' : '';
+                            echo '<option value="' . htmlspecialchars($item, ENT_QUOTES, 'UTF-8') . '" ' . $selected . '>' . htmlspecialchars($item, ENT_QUOTES, 'UTF-8') . '</option>';
                         }
-
                         ?>
-
                     </select>
-
                 </div>
 
             </div>
 
-
-            <div class="section-title">
-                Purchase Information
-            </div>
-
+            <div class="section-title">Purchase Information</div>
 
             <div class="form-grid">
-
-
                 <div class="form-group">
-
-                    <label for="purchase_date">
-                        Purchase Date
-                    </label>
-
-                    <input
-                        type="date"
-                        id="purchase_date"
-                        name="purchase_date"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $purchase_date,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                    >
-
+                    <label for="purchase_date">Purchase Date</label>
+                    <input type="date" id="purchase_date" name="purchase_date" value="<?php echo htmlspecialchars($purchase_date, ENT_QUOTES, 'UTF-8'); ?>">
                 </div>
 
-
                 <div class="form-group">
-
-                    <label for="purchased_from">
-                        Purchased From
-                    </label>
-
+                    <label for="purchased_from">Purchased From</label>
                     <div class="combo" data-combo="courier">
-                        <input
-                            type="text"
-                            id="purchased_from"
-                            name="purchased_from"
-                            class="combo-input"
-                            placeholder="Search or type a name..."
-                            autocomplete="off"
-                            value="<?php
-                            echo htmlspecialchars(
-                                $purchased_from,
-                                ENT_QUOTES,
-                                'UTF-8'
-                            );
-                            ?>"
-                        >
+                        <input type="text" id="purchased_from" name="purchased_from" class="combo-input" placeholder="Search or type a name..." autocomplete="off" value="<?php echo htmlspecialchars($purchased_from, ENT_QUOTES, 'UTF-8'); ?>">
                         <div class="combo-list"></div>
                     </div>
-
                 </div>
-
 
                 <div class="form-group">
+                    <label for="purchase_price">Purchase Price</label>
+                    <input type="number" id="purchase_price" name="purchase_price" min="0" step="0.01" placeholder="0.00" value="<?php echo htmlspecialchars($purchase_price, ENT_QUOTES, 'UTF-8'); ?>">
+                    <div class="note">Optional</div>
+                </div>
+            </div>
 
-                    <label for="purchase_price">
-                        Purchase Price
-                    </label>
+            <div class="section-title">Device Serial Numbers &amp; MAC Addresses</div>
 
-                    <input
-                        type="number"
-                        id="purchase_price"
-                        name="purchase_price"
-                        min="0"
-                        step="0.01"
-                        placeholder="0.00"
-                        value="<?php
-                        echo htmlspecialchars(
-                            $purchase_price,
-                            ENT_QUOTES,
-                            'UTF-8'
-                        );
-                        ?>"
-                    >
-
-                    <div class="note">
-                        Optional
-                    </div>
-
+            <div class="device-entries-section">
+                <div class="device-entries-header">
+                    <h4>Enter SN and MAC for each device <span class="required">*</span></h4>
+                    <button type="button" class="btn-add-entry" onclick="addDeviceRow()">+ Add Device</button>
                 </div>
 
+                <div id="device-entries-container">
+                    <?php
+                    $entry_count = count($device_entries);
+                    foreach ($device_entries as $index => $entry) {
+                        $is_first = ($index === 0);
+                        ?>
+                        <div class="device-entry-row" data-index="<?php echo $index; ?>">
+                            <div class="form-group">
+                                <label for="sn_<?php echo $index; ?>">Serial Number <span class="required">*</span></label>
+                                <input type="text" id="sn_<?php echo $index; ?>" name="sn[]" placeholder="SN-123456" value="<?php echo htmlspecialchars($entry['sn'], ENT_QUOTES, 'UTF-8'); ?>" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="mac_<?php echo $index; ?>">MAC Address</label>
+                                <input type="text" id="mac_<?php echo $index; ?>" name="mac[]" placeholder="AA:BB:CC:DD:EE:FF" value="<?php echo htmlspecialchars($entry['mac'], ENT_QUOTES, 'UTF-8'); ?>">
+                            </div>
+                            <button type="button" class="btn-remove-entry" onclick="removeDeviceRow(this)" <?php echo ($is_first && $entry_count <= 1) ? 'disabled' : ''; ?>>×</button>
+                        </div>
+                        <?php
+                    }
+                    ?>
+                </div>
             </div>
-
 
             <div class="actions">
-
-                <a
-                    href="dashboard.php"
-                    class="button cancel"
-                >
-                    Cancel
-                </a>
-
-                <button
-                    type="submit"
-                    class="button submit"
-                >
-                    Add Device
-                </button>
-
+                <a href="dashboard.php" class="button cancel">Cancel</a>
+                <button type="submit" class="button submit">Add Devices</button>
             </div>
-
 
         </form>
 
@@ -1905,10 +1113,7 @@ document.addEventListener('click', function(event) {
 var BRANDS = <?php
     $brand_rows = array();
     foreach ($brands as $b) {
-        $brand_rows[] = array(
-            'id' => (int)$b['id'],
-            'name' => $b['brand_name']
-        );
+        $brand_rows[] = array('id' => (int)$b['id'], 'name' => $b['brand_name']);
     }
     echo json_encode($brand_rows);
 ?>;
@@ -1916,11 +1121,7 @@ var BRANDS = <?php
 var MODELS = <?php
     $model_rows = array();
     foreach ($models as $m) {
-        $model_rows[] = array(
-            'id' => (int)$m['id'],
-            'brand_id' => (int)$m['brand_id'],
-            'name' => $m['model_name']
-        );
+        $model_rows[] = array('id' => (int)$m['id'], 'brand_id' => (int)$m['brand_id'], 'name' => $m['model_name']);
     }
     echo json_encode($model_rows);
 ?>;
@@ -1928,10 +1129,7 @@ var MODELS = <?php
 var COURIERS = <?php
     $courier_rows = array();
     foreach ($couriers as $c) {
-        $courier_rows[] = array(
-            'id' => (int)$c['id'],
-            'name' => $c['name']
-        );
+        $courier_rows[] = array('id' => (int)$c['id'], 'name' => $c['name']);
     }
     echo json_encode($courier_rows);
 ?>;
@@ -2038,7 +1236,71 @@ var brandCombo = initCombo(brandRoot, BRANDS, function (item) {
     updateComposedName();
 });
 
-initCombo(supplierRoot, COURIERS, function (item) {
+initCombo(supplierRoot, COURIERS, function (item) {});
+
+// Device entries management
+function addDeviceRow() {
+    var container = document.getElementById('device-entries-container');
+    var rows = container.querySelectorAll('.device-entry-row');
+    var newIndex = rows.length;
+    
+    var row = document.createElement('div');
+    row.className = 'device-entry-row';
+    row.setAttribute('data-index', newIndex);
+    row.style.animation = 'riseIn 0.3s ease';
+    
+    row.innerHTML = `
+        <div class="form-group">
+            <label for="sn_${newIndex}">Serial Number <span class="required">*</span></label>
+            <input type="text" id="sn_${newIndex}" name="sn[]" placeholder="SN-123456" required>
+        </div>
+        <div class="form-group">
+            <label for="mac_${newIndex}">MAC Address</label>
+            <input type="text" id="mac_${newIndex}" name="mac[]" placeholder="AA:BB:CC:DD:EE:FF">
+        </div>
+        <button type="button" class="btn-remove-entry" onclick="removeDeviceRow(this)">×</button>
+    `;
+    
+    container.appendChild(row);
+    
+    // Enable remove buttons if there are more than 1 row
+    updateRemoveButtons();
+}
+
+function removeDeviceRow(button) {
+    var row = button.closest('.device-entry-row');
+    var container = document.getElementById('device-entries-container');
+    var rows = container.querySelectorAll('.device-entry-row');
+    
+    if (rows.length > 1) {
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(-20px)';
+        setTimeout(function() {
+            row.remove();
+            updateRemoveButtons();
+        }, 200);
+    }
+}
+
+function updateRemoveButtons() {
+    var container = document.getElementById('device-entries-container');
+    var rows = container.querySelectorAll('.device-entry-row');
+    var buttons = container.querySelectorAll('.btn-remove-entry');
+    
+    if (rows.length <= 1) {
+        buttons.forEach(function(btn) {
+            btn.disabled = true;
+        });
+    } else {
+        buttons.forEach(function(btn) {
+            btn.disabled = false;
+        });
+    }
+}
+
+// Initialize remove buttons state
+document.addEventListener('DOMContentLoaded', function() {
+    updateRemoveButtons();
 });
 </script>
 
